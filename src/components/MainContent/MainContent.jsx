@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import {
   Form,
@@ -24,7 +24,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { X, Upload, Scale, Palette } from "lucide-react";
+import { X, Upload, Scale, Palette, Download } from "lucide-react";
 import { ShadowControl } from "@/components/ui/shadow-control";
 
 // Preset dimensions for common formats
@@ -90,6 +90,9 @@ const MainContent = () => {
     opacity: 20,
   });
 
+  // Reference to the preview container for download functionality
+  const previewRef = useRef(null);
+
   // Update dimensions and background color when form values change
   useEffect(() => {
     const subscription = form.watch((value) => {
@@ -143,6 +146,50 @@ const MainContent = () => {
   // Handle image scale change
   const handleScaleChange = (value) => {
     setImageScale(value[0]);
+  };
+
+  // Handle image download with background and shadow
+  const handleDownload = () => {
+    if (!uploadedImage) return;
+
+    // Create a canvas with the actual dimensions
+    const canvas = document.createElement("canvas");
+    canvas.width = dimensions.width;
+    canvas.height = dimensions.height;
+    const ctx = canvas.getContext("2d");
+
+    // Fill background
+    ctx.fillStyle = backgroundColor;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Create a new image to draw on canvas
+    const img = new Image();
+    img.onload = () => {
+      // Calculate scaled dimensions
+      const scaledWidth = img.width * imageScale;
+      const scaledHeight = img.height * imageScale;
+
+      // Center the image
+      const x = (canvas.width - scaledWidth) / 2;
+      const y = (canvas.height - scaledHeight) / 2;
+
+      // Apply shadow
+      ctx.shadowOffsetX = shadowSettings.offsetX;
+      ctx.shadowOffsetY = shadowSettings.offsetY;
+      ctx.shadowBlur = shadowSettings.blur;
+      ctx.shadowColor = `rgba(0,0,0,${shadowSettings.opacity / 100})`;
+
+      // Draw the image
+      ctx.drawImage(img, x, y, scaledWidth, scaledHeight);
+
+      // Convert to data URL and trigger download
+      const dataUrl = canvas.toDataURL("image/png");
+      const link = document.createElement("a");
+      link.download = `chobi-image-${dimensions.width}x${dimensions.height}.png`;
+      link.href = dataUrl;
+      link.click();
+    };
+    img.src = uploadedImage;
   };
 
   return (
@@ -348,6 +395,7 @@ const MainContent = () => {
                   style={{ minHeight: "400px" }}
                 >
                   <div
+                    ref={previewRef}
                     className={`border border-border rounded-md transition-all duration-300 flex items-center justify-center overflow-hidden shadow-sm ${
                       !uploadedImage
                         ? "cursor-pointer hover:bg-accent hover:text-accent-foreground"
@@ -402,10 +450,22 @@ const MainContent = () => {
                 </CardContent>
               </Card>
 
-              <p className="text-sm text-muted-foreground text-center">
-                Preview shows a scaled version. Actual output will be{" "}
-                {dimensions.width}px × {dimensions.height}px.
-              </p>
+              <div className="flex justify-between items-center">
+                <p className="text-sm text-muted-foreground">
+                  Preview shows a scaled version. Actual output will be{" "}
+                  {dimensions.width}px × {dimensions.height}px.
+                </p>
+                {uploadedImage && (
+                  <Button 
+                    variant="default" 
+                    onClick={handleDownload}
+                    className="flex items-center gap-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    Download Image
+                  </Button>
+                )}
+              </div>
             </div>
 
             {/* Image Scale Control - Only visible when an image is uploaded */}
