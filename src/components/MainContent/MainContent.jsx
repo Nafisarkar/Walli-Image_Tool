@@ -21,8 +21,8 @@ import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "@/components/ui/accordion";
-import { Label } from "@/components/ui/label"; // Ensure Label is imported
+} from "@/components/ui/accordion"; // Ensure all Accordion parts are imported
+import { Label } from "@/components/ui/label";
 
 // Icons
 import {
@@ -34,14 +34,15 @@ import {
   Image as ImageIcon,
   Settings as SettingsIcon,
   Wand2,
-  // ChevronDown // Optional: for accordion trigger
   Square, // Used for Corner Radius & Border
   Droplet, // Used for Watermark
   Type, // Used for Font Family
+  Wind, // Icon for Shadow
 } from "lucide-react";
 
 // React Hook Form
 import { useForm } from "react-hook-form";
+import { Switch } from "../ui/switch";
 
 // --- ShadowControl Component (Unchanged) ---
 const ShadowControl = ({ defaultValues, onChange }) => {
@@ -201,9 +202,7 @@ const hexToRgba = (hex, opacityPercent) => {
     g = parseInt(hex[3] + hex[4], 16);
     b = parseInt(hex[5] + hex[6], 16);
   } else {
-    // Default to white if hex is invalid
-    // Consider returning an error or a more noticeable fallback color
-    return `rgba(255, 255, 255, ${alpha})`;
+    return `rgba(255, 255, 255, ${alpha})`; // Default to white if hex is invalid
   }
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
@@ -254,24 +253,24 @@ const MainContent = () => {
   });
   const [isLoadingImage, setIsLoadingImage] = useState(false);
   const [activeAccordionItem, setActiveAccordionItem] =
-    useState("canvas-settings");
-  const [imageBorderRadius, setImageBorderRadius] = useState(0); // Percentage
+    useState("canvas-settings"); // Controls outer accordion
+  const [imageBorderRadius, setImageBorderRadius] = useState(0);
 
   // == Image Border State ==
   const [imageBorderEnabled, setImageBorderEnabled] = useState(false);
-  const [imageBorderWidth, setImageBorderWidth] = useState(4); // Pixels
-  const [imageBorderColor, setImageBorderColor] = useState("#000000"); // Default black
+  const [imageBorderWidth, setImageBorderWidth] = useState(4);
+  const [imageBorderColor, setImageBorderColor] = useState("#000000");
 
   // == Watermark State ==
   const [watermarkEnabled, setWatermarkEnabled] = useState(false);
   const [watermarkText, setWatermarkText] = useState("");
-  const [watermarkOpacity, setWatermarkOpacity] = useState(50); // Percentage 0-100
-  const [watermarkSizePercent, setWatermarkSizePercent] = useState(4); // Percentage of image height
+  const [watermarkOpacity, setWatermarkOpacity] = useState(50);
+  const [watermarkSizePercent, setWatermarkSizePercent] = useState(4);
   const [watermarkColor, setWatermarkColor] = useState("#ffffff");
-  const [watermarkPosition, setWatermarkPosition] = useState("center"); // 'left', 'center', 'right'
+  const [watermarkPosition, setWatermarkPosition] = useState("center");
   const [watermarkFontFamily, setWatermarkFontFamily] = useState(
     WATERMARK_FONTS[0].value
-  ); // Default font
+  );
 
   // == Refs ==
   const fileInputRef = useRef(null);
@@ -542,7 +541,7 @@ const MainContent = () => {
     // Final restore from initial save
     ctx.restore();
   }, [
-    // Add border states to dependency array
+    // Added all relevant states
     loadedImgElement,
     imageScale,
     shadowSettings,
@@ -560,7 +559,7 @@ const MainContent = () => {
     watermarkFontFamily,
     imageBorderEnabled,
     imageBorderWidth,
-    imageBorderColor, // <<< ADDED
+    imageBorderColor,
   ]);
 
   // == Handlers ==
@@ -753,7 +752,7 @@ const MainContent = () => {
     if (watermarkEnabled && watermarkText && totalHeight > 0) {
       ctx.save();
 
-      const baseFontSize = scaledImgH * (watermarkSizePercent / 100); // Relative to image height
+      const baseFontSize = scaledImgH * (watermarkSizePercent / 100);
       const fontSize = Math.max(8, baseFontSize);
       const padding = fontSize * 0.5;
 
@@ -763,7 +762,7 @@ const MainContent = () => {
       ctx.textBaseline = "bottom";
 
       let wmX;
-      const wmY = outerY + totalHeight - padding; // Relative to outer edge
+      const wmY = outerY + totalHeight - padding;
 
       switch (watermarkPosition) {
         case "left":
@@ -973,20 +972,20 @@ const MainContent = () => {
           </div>
           {/* Right Column: Settings */}
           <div className="lg:w-[400px] xl:w-[450px] space-y-0 flex-shrink-0">
-            {/* Single Accordion Wrapper */}
+            {/* Outer Accordion Wrapper */}
             <Accordion
               type="single"
               collapsible
               value={activeAccordionItem}
               onValueChange={setActiveAccordionItem}
-              className="w-full space-y-6"
+              className="w-full space-y-6" // Spacing between Canvas/Image sections
             >
               {/* == Canvas Settings Accordion Item == */}
               <AccordionItem value="canvas-settings" className="border-b-0">
                 <Card className="overflow-hidden">
-                  <AccordionTrigger className="px-6 py-4 hover:no-underline [&[data-state=open]>div>svg.lucide-chevron-down]:rotate-180">
+                  <AccordionTrigger className="px-6 py-4 hover:no-underline text-lg [&[data-state=open]>div>svg.lucide-chevron-down]:rotate-180">
                     <div className="flex items-center justify-between w-full">
-                      <div className="flex items-center gap-3 text-xl font-semibold">
+                      <div className="flex items-center gap-3 font-semibold">
                         <SettingsIcon className="h-5 w-5" /> Canvas Settings
                       </div>
                       {/* <ChevronDown className="h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-200 lucide lucide-chevron-down" /> */}
@@ -1239,9 +1238,9 @@ const MainContent = () => {
               {uploadedImage && (
                 <AccordionItem value="image-controls" className="border-b-0">
                   <Card className="overflow-hidden">
-                    <AccordionTrigger className="px-6 py-4 hover:no-underline [&[data-state=open]>div>svg.lucide-chevron-down]:rotate-180">
+                    <AccordionTrigger className="px-6 py-4 hover:no-underline text-lg [&[data-state=open]>div>svg.lucide-chevron-down]:rotate-180">
                       <div className="flex items-center justify-between w-full">
-                        <div className="flex items-center gap-3 text-xl font-semibold">
+                        <div className="flex items-center gap-3 font-semibold">
                           <Wand2 className="h-5 w-5" /> Image Controls
                         </div>
                         {/* <ChevronDown className="h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-200 lucide lucide-chevron-down" /> */}
@@ -1249,293 +1248,381 @@ const MainContent = () => {
                     </AccordionTrigger>
                     <AccordionContent className="px-6 pt-0 pb-6">
                       {loadedImgElement ? (
-                        <div className="space-y-6 pt-4">
-                          {/* Scale Control */}
-                          <div className="space-y-3">
-                            <div className="flex items-center justify-between gap-2">
-                              <label className="flex items-center gap-2 text-sm font-medium text-foreground">
-                                <Scale className="h-4 w-4 text-muted-foreground" />{" "}
-                                Image Scale
-                              </label>
-                              <span className="text-sm font-mono w-16 text-right text-muted-foreground">
-                                {imageScale.toFixed(2)}x
-                              </span>
-                            </div>
-                            <Slider
-                              aria-label="Image Scale"
-                              value={[imageScale]}
-                              min={0.1}
-                              max={5}
-                              step={0.05}
-                              onValueChange={handleScaleChange}
-                              className="w-full"
-                            />
-                          </div>
-
-                          {/* Border Radius Control */}
-                          <div className="space-y-3">
-                            <div className="flex items-center justify-between gap-2">
-                              <label
-                                htmlFor="image-border-radius"
-                                className="flex items-center gap-2 text-sm font-medium text-foreground"
-                              >
-                                <Square className="h-4 w-4 text-muted-foreground" />{" "}
-                                Corner Radius
-                              </label>
-                              <span className="text-sm font-mono w-16 text-right text-muted-foreground">
-                                {imageBorderRadius}%
-                              </span>
-                            </div>
-                            <Slider
-                              id="image-border-radius"
-                              aria-label="Image Corner Radius"
-                              value={[imageBorderRadius]}
-                              min={0}
-                              max={50}
-                              step={1}
-                              onValueChange={(value) =>
-                                setImageBorderRadius(value[0])
-                              }
-                              className="w-full"
-                            />
-                          </div>
-
-                          {/* Shadow Settings Control */}
-                          <div className="space-y-3">
-                            <div className="flex items-center gap-2">
-                              <label className="text-sm font-medium text-foreground">
-                                Image Shadow
-                              </label>
-                            </div>
-                            <ShadowControl
-                              defaultValues={shadowSettings}
-                              onChange={setShadowSettings}
-                            />
-                          </div>
-
-                          {/* --- Border Controls --- */}
-                          <Card className="border border-border/40 p-4 space-y-4 bg-accent/10">
-                            <div className="flex items-center justify-between">
-                              <label className="text-sm font-medium text-foreground flex items-center gap-2">
-                                <Square className="h-4 w-4 text-muted-foreground" />{" "}
-                                Image Border
-                              </label>
-                              <Button
-                                size="sm"
-                                variant={
-                                  imageBorderEnabled ? "secondary" : "outline"
-                                }
-                                onClick={() =>
-                                  setImageBorderEnabled(!imageBorderEnabled)
-                                }
-                              >
-                                {imageBorderEnabled ? "Enabled" : "Disabled"}
-                              </Button>
-                            </div>
-                            {imageBorderEnabled && (
-                              <div className="space-y-4 pt-2 border-t border-border/20">
-                                <div className="space-y-1.5">
-                                  <Label htmlFor="image-border-width">
-                                    Width ({imageBorderWidth}px)
-                                  </Label>
-                                  <Slider
-                                    id="image-border-width"
-                                    min={0}
-                                    max={30}
-                                    step={1} // Adjust max width as needed
-                                    value={[imageBorderWidth]}
-                                    onValueChange={(val) =>
-                                      setImageBorderWidth(val[0])
-                                    }
-                                  />
+                        // --- NESTED ACCORDION FOR IMAGE CONTROLS ---
+                        <Accordion
+                          type="multiple"
+                          className="w-full space-y-4 pt-4"
+                        >
+                          {/* Scale & Radius Item */}
+                          <AccordionItem
+                            value="image-scale-radius"
+                            className="border-b-0"
+                          >
+                            <Card className="overflow-hidden border border-border/40 bg-accent/10">
+                              <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm [&[data-state=open]>svg]:rotate-180">
+                                <div className="flex items-center gap-2 font-medium">
+                                  <Scale className="h-4 w-4 text-muted-foreground" />{" "}
+                                  Scale & Radius
                                 </div>
-                                <div className="space-y-1.5">
-                                  <Label>Color</Label>
-                                  <div className="flex items-center gap-3">
-                                    <input
-                                      type="color"
-                                      className="w-10 h-10 border-none cursor-pointer p-0 rounded bg-transparent"
-                                      value={imageBorderColor}
-                                      onChange={(e) =>
-                                        setImageBorderColor(e.target.value)
-                                      }
-                                      style={{
-                                        backgroundColor: imageBorderColor,
-                                        border:
-                                          imageBorderColor.toLowerCase() >
-                                          "#eeeeee"
-                                            ? "1px solid #ccc"
-                                            : "none",
-                                      }}
-                                      title="Border Color"
-                                    />
-                                    <Input
-                                      type="text"
-                                      className="w-24 font-mono text-sm h-10"
-                                      placeholder="#000000"
-                                      value={imageBorderColor}
-                                      onChange={(e) =>
-                                        setImageBorderColor(e.target.value)
-                                      }
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                          </Card>
-                          {/* --- END: Border Controls --- */}
-
-                          {/* --- Watermark Controls --- */}
-                          <Card className="border border-border/40 p-4 space-y-4 bg-accent/10">
-                            <div className="flex items-center justify-between">
-                              <label className="text-sm font-medium text-foreground flex items-center gap-2">
-                                <Droplet className="h-4 w-4 text-muted-foreground" />{" "}
-                                Watermark
-                              </label>
-                              <Button
-                                size="sm"
-                                variant={
-                                  watermarkEnabled ? "secondary" : "outline"
-                                }
-                                onClick={() =>
-                                  setWatermarkEnabled(!watermarkEnabled)
-                                }
-                              >
-                                {watermarkEnabled ? "Enabled" : "Disabled"}
-                              </Button>
-                            </div>
-                            {watermarkEnabled && (
-                              <div className="space-y-4 pt-2 border-t border-border/20">
-                                <div className="space-y-1.5">
-                                  <Label htmlFor="watermark-text">Text</Label>
-                                  <Input
-                                    id="watermark-text"
-                                    type="text"
-                                    placeholder="Your watermark"
-                                    value={watermarkText}
-                                    onChange={(e) =>
-                                      setWatermarkText(e.target.value)
-                                    }
-                                  />
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
+                              </AccordionTrigger>
+                              <AccordionContent className="px-4 pb-4 pt-0">
+                                <div className="pt-4 space-y-4 border-t border-border/20">
+                                  {/* Scale Slider */}
                                   <div className="space-y-1.5">
-                                    <Label htmlFor="watermark-opacity">
-                                      Opacity ({watermarkOpacity}%)
-                                    </Label>
-                                    <Slider
-                                      id="watermark-opacity"
-                                      min={0}
-                                      max={100}
-                                      step={1}
-                                      value={[watermarkOpacity]}
-                                      onValueChange={(val) =>
-                                        setWatermarkOpacity(val[0])
-                                      }
-                                    />
-                                  </div>
-                                  <div className="space-y-1.5">
-                                    <Label htmlFor="watermark-size">
-                                      Size ({watermarkSizePercent}%)
-                                    </Label>
-                                    <Slider
-                                      id="watermark-size"
-                                      min={1}
-                                      max={15}
-                                      step={0.5}
-                                      value={[watermarkSizePercent]}
-                                      onValueChange={(val) =>
-                                        setWatermarkSizePercent(val[0])
-                                      }
-                                    />
-                                  </div>
-                                </div>
-                                <div className="space-y-1.5">
-                                  <Label>Color</Label>
-                                  <div className="flex items-center gap-3">
-                                    <input
-                                      type="color"
-                                      className="w-10 h-10 border-none cursor-pointer p-0 rounded bg-transparent"
-                                      value={watermarkColor}
-                                      onChange={(e) =>
-                                        setWatermarkColor(e.target.value)
-                                      }
-                                      style={{
-                                        backgroundColor: watermarkColor,
-                                        border:
-                                          watermarkColor.toLowerCase() >
-                                          "#eeeeee"
-                                            ? "1px solid #ccc"
-                                            : "none",
-                                      }}
-                                      title="Watermark Color"
-                                    />
-                                    <Input
-                                      type="text"
-                                      className="w-24 font-mono text-sm h-10"
-                                      placeholder="#ffffff"
-                                      value={watermarkColor}
-                                      onChange={(e) =>
-                                        setWatermarkColor(e.target.value)
-                                      }
-                                    />
-                                  </div>
-                                </div>
-                                <div className="space-y-1.5">
-                                  <Label
-                                    htmlFor="watermark-font"
-                                    className="flex items-center gap-2"
-                                  >
-                                    {" "}
-                                    <Type className="h-4 w-4 text-muted-foreground" />{" "}
-                                    Font Family{" "}
-                                  </Label>
-                                  <select
-                                    id="watermark-font"
-                                    value={watermarkFontFamily}
-                                    onChange={(e) =>
-                                      setWatermarkFontFamily(e.target.value)
-                                    }
-                                    className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                  >
-                                    {WATERMARK_FONTS.map((font) => (
-                                      <option
-                                        key={font.value}
-                                        value={font.value}
-                                      >
+                                    <div className="flex items-center justify-between gap-2">
+                                      <Label className="text-xs">Scale</Label>
+                                      <span className="text-xs font-mono text-muted-foreground">
                                         {" "}
-                                        {font.name}{" "}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </div>
-                                <div className="space-y-1.5">
-                                  <Label>Position</Label>
-                                  <div className="flex gap-2">
-                                    {["left", "center", "right"].map((pos) => (
-                                      <Button
-                                        key={pos}
-                                        size="sm"
-                                        variant={
-                                          watermarkPosition === pos
-                                            ? "default"
-                                            : "outline"
-                                        }
-                                        onClick={() =>
-                                          setWatermarkPosition(pos)
-                                        }
-                                        className="capitalize flex-1"
+                                        {imageScale.toFixed(2)}x{" "}
+                                      </span>
+                                    </div>
+                                    <Slider
+                                      aria-label="Image Scale"
+                                      value={[imageScale]}
+                                      min={0.1}
+                                      max={5}
+                                      step={0.05}
+                                      onValueChange={handleScaleChange}
+                                    />
+                                  </div>
+                                  {/* Radius Slider */}
+                                  <div className="space-y-1.5">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <Label
+                                        htmlFor="image-border-radius"
+                                        className="text-xs"
                                       >
-                                        {pos}
-                                      </Button>
-                                    ))}
+                                        Corner Radius
+                                      </Label>
+                                      <span className="text-xs font-mono text-muted-foreground">
+                                        {" "}
+                                        {imageBorderRadius}%{" "}
+                                      </span>
+                                    </div>
+                                    <Slider
+                                      id="image-border-radius"
+                                      aria-label="Image Corner Radius"
+                                      value={[imageBorderRadius]}
+                                      min={0}
+                                      max={50}
+                                      step={1}
+                                      onValueChange={(value) =>
+                                        setImageBorderRadius(value[0])
+                                      }
+                                    />
                                   </div>
                                 </div>
-                              </div>
-                            )}
-                          </Card>
-                          {/* --- END: Watermark Controls --- */}
-                        </div>
+                              </AccordionContent>
+                            </Card>
+                          </AccordionItem>
+
+                          {/* Shadow Item */}
+                          <AccordionItem
+                            value="image-shadow"
+                            className="border-b-0"
+                          >
+                            <Card className="overflow-hidden border border-border/40 bg-accent/10">
+                              <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm [&[data-state=open]>svg]:rotate-180">
+                                <div className="flex items-center gap-2 font-medium">
+                                  <Wind className="h-4 w-4 text-muted-foreground" />{" "}
+                                  Shadow
+                                </div>
+                              </AccordionTrigger>
+                              <AccordionContent className="px-4 pb-0 pt-0">
+                                {" "}
+                                {/* ShadowControl has own Card+Padding */}
+                                <div className="pt-4 border-t border-border/20">
+                                  <ShadowControl
+                                    defaultValues={shadowSettings}
+                                    onChange={setShadowSettings}
+                                  />
+                                </div>
+                              </AccordionContent>
+                            </Card>
+                          </AccordionItem>
+
+                          {/* Border Item */}
+                          <AccordionItem
+                            value="image-border"
+                            className="border-b-0"
+                          >
+                            <Card className="overflow-hidden border border-border/40 bg-accent/10">
+                              <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm [&[data-state=open]>svg]:rotate-180">
+                                <div className="flex items-center gap-2 font-medium">
+                                  <Square className="h-4 w-4 text-muted-foreground" />{" "}
+                                  Border
+                                </div>
+                              </AccordionTrigger>
+                              <AccordionContent className="px-4 pb-4 pt-0">
+                                <div className="pt-4 space-y-4 border-t border-border/20">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs">
+                                      Enable Border
+                                    </Label>
+                                    <Switch
+                                      size="xs"
+                                      variant={
+                                        imageBorderEnabled
+                                          ? "secondary"
+                                          : "outline"
+                                      }
+                                      onClick={() =>
+                                        setImageBorderEnabled(
+                                          !imageBorderEnabled
+                                        )
+                                      }
+                                    >
+                                      {" "}
+                                      {imageBorderEnabled ? "On" : "Off"}{" "}
+                                    </Switch>
+                                  </div>
+                                  {imageBorderEnabled && (
+                                    <div className="space-y-4">
+                                      <div className="space-y-1.5">
+                                        <Label
+                                          htmlFor="image-border-width"
+                                          className="text-xs"
+                                        >
+                                          Width ({imageBorderWidth}px)
+                                        </Label>
+                                        <Slider
+                                          id="image-border-width"
+                                          min={0}
+                                          max={30}
+                                          step={1}
+                                          value={[imageBorderWidth]}
+                                          onValueChange={(val) =>
+                                            setImageBorderWidth(val[0])
+                                          }
+                                        />
+                                      </div>
+                                      <div className="space-y-1.5">
+                                        <Label className="text-xs">Color</Label>
+                                        <div className="flex items-center gap-3">
+                                          <input
+                                            type="color"
+                                            className="w-8 h-8 border-none cursor-pointer p-0 rounded bg-transparent"
+                                            value={imageBorderColor}
+                                            onChange={(e) =>
+                                              setImageBorderColor(
+                                                e.target.value
+                                              )
+                                            }
+                                            style={{
+                                              backgroundColor: imageBorderColor,
+                                              border:
+                                                imageBorderColor.toLowerCase() >
+                                                "#eeeeee"
+                                                  ? "1px solid #ccc"
+                                                  : "none",
+                                            }}
+                                            title="Border Color"
+                                          />
+                                          <Input
+                                            type="text"
+                                            className="w-20 font-mono text-xs h-8"
+                                            placeholder="#000000"
+                                            value={imageBorderColor}
+                                            onChange={(e) =>
+                                              setImageBorderColor(
+                                                e.target.value
+                                              )
+                                            }
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </AccordionContent>
+                            </Card>
+                          </AccordionItem>
+
+                          {/* Watermark Item */}
+                          <AccordionItem
+                            value="image-watermark"
+                            className="border-b-0"
+                          >
+                            <Card className="overflow-hidden border border-border/40 bg-accent/10">
+                              <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm [&[data-state=open]>svg]:rotate-180">
+                                <div className="flex items-center gap-2 font-medium">
+                                  <Droplet className="h-4 w-4 text-muted-foreground" />{" "}
+                                  Watermark
+                                </div>
+                              </AccordionTrigger>
+                              <AccordionContent className="px-4 pb-4 pt-0">
+                                <div className="pt-4 space-y-4 border-t border-border/20">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs">
+                                      Enable Watermark
+                                    </Label>
+                                    <Switch
+                                      size="xs text-xs"
+                                      variant={
+                                        watermarkEnabled
+                                          ? "secondary"
+                                          : "outline"
+                                      }
+                                      onClick={() =>
+                                        setWatermarkEnabled(!watermarkEnabled)
+                                      }
+                                    >
+                                      {" "}
+                                      {watermarkEnabled ? "On" : "Off"}{" "}
+                                    </Switch>
+                                  </div>
+                                  {watermarkEnabled && (
+                                    <div className="space-y-4">
+                                      <div className="space-y-1.5">
+                                        <Label
+                                          htmlFor="watermark-text"
+                                          className="text-xs"
+                                        >
+                                          Text
+                                        </Label>
+                                        <Input
+                                          id="watermark-text"
+                                          type="text"
+                                          placeholder="Your watermark"
+                                          value={watermarkText}
+                                          onChange={(e) =>
+                                            setWatermarkText(e.target.value)
+                                          }
+                                          className="h-8 text-xs"
+                                        />
+                                      </div>
+                                      <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-1.5">
+                                          <Label
+                                            htmlFor="watermark-opacity"
+                                            className="text-xs"
+                                          >
+                                            Opacity ({watermarkOpacity}%)
+                                          </Label>
+                                          <Slider
+                                            id="watermark-opacity"
+                                            min={0}
+                                            max={100}
+                                            step={1}
+                                            value={[watermarkOpacity]}
+                                            onValueChange={(val) =>
+                                              setWatermarkOpacity(val[0])
+                                            }
+                                          />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                          <Label
+                                            htmlFor="watermark-size"
+                                            className="text-xs"
+                                          >
+                                            Size ({watermarkSizePercent}%)
+                                          </Label>
+                                          <Slider
+                                            id="watermark-size"
+                                            min={1}
+                                            max={15}
+                                            step={0.5}
+                                            value={[watermarkSizePercent]}
+                                            onValueChange={(val) =>
+                                              setWatermarkSizePercent(val[0])
+                                            }
+                                          />
+                                        </div>
+                                      </div>
+                                      <div className="space-y-1.5">
+                                        <Label className="text-xs">Color</Label>
+                                        <div className="flex items-center gap-3">
+                                          <input
+                                            type="color"
+                                            className="w-8 h-8 border-none cursor-pointer p-0 rounded bg-transparent"
+                                            value={watermarkColor}
+                                            onChange={(e) =>
+                                              setWatermarkColor(e.target.value)
+                                            }
+                                            style={{
+                                              backgroundColor: watermarkColor,
+                                              border:
+                                                watermarkColor.toLowerCase() >
+                                                "#eeeeee"
+                                                  ? "1px solid #ccc"
+                                                  : "none",
+                                            }}
+                                            title="Watermark Color"
+                                          />
+                                          <Input
+                                            type="text"
+                                            className="w-20 font-mono text-xs h-8"
+                                            placeholder="#ffffff"
+                                            value={watermarkColor}
+                                            onChange={(e) =>
+                                              setWatermarkColor(e.target.value)
+                                            }
+                                          />
+                                        </div>
+                                      </div>
+                                      <div className="space-y-1.5">
+                                        <Label
+                                          htmlFor="watermark-font"
+                                          className="text-xs flex items-center gap-1"
+                                        >
+                                          {" "}
+                                          <Type className="h-3 w-3" /> Font
+                                          Family{" "}
+                                        </Label>
+                                        <select
+                                          id="watermark-font"
+                                          value={watermarkFontFamily}
+                                          onChange={(e) =>
+                                            setWatermarkFontFamily(
+                                              e.target.value
+                                            )
+                                          }
+                                          className="flex h-8 w-full items-center justify-between rounded-md border border-input bg-background px-2 py-1 text-xs ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                          {WATERMARK_FONTS.map((font) => (
+                                            <option
+                                              key={font.value}
+                                              value={font.value}
+                                            >
+                                              {" "}
+                                              {font.name}{" "}
+                                            </option>
+                                          ))}
+                                        </select>
+                                      </div>
+                                      <div className="space-y-1.5">
+                                        <Label className="text-xs">
+                                          Position
+                                        </Label>
+                                        <div className="flex gap-2">
+                                          {["left", "center", "right"].map(
+                                            (pos) => (
+                                              <Button
+                                                key={pos}
+                                                size="xs"
+                                                variant={
+                                                  watermarkPosition === pos
+                                                    ? "default"
+                                                    : "outline"
+                                                }
+                                                onClick={() =>
+                                                  setWatermarkPosition(pos)
+                                                }
+                                                className="capitalize flex-1 h-8 text-xs"
+                                              >
+                                                {pos}
+                                              </Button>
+                                            )
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </AccordionContent>
+                            </Card>
+                          </AccordionItem>
+                        </Accordion> // --- END NESTED ACCORDION ---
                       ) : (
                         <div className="pt-4 text-center text-muted-foreground">
                           Loading image data...
@@ -1546,7 +1633,7 @@ const MainContent = () => {
                 </AccordionItem>
               )}
             </Accordion>{" "}
-            {/* End Single Accordion Wrapper */}
+            {/* End Outer Accordion Wrapper */}
           </div>{" "}
           {/* End Right Column */}
         </div>{" "}
