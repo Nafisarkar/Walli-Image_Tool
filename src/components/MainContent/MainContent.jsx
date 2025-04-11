@@ -22,7 +22,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Label } from "@/components/ui/label";
+import { Label } from "@/components/ui/label"; // Ensure Label is imported
 
 // Icons
 import {
@@ -34,10 +34,10 @@ import {
   Image as ImageIcon,
   Settings as SettingsIcon,
   Wand2,
-  // ChevronDown // Uncomment if you want to add chevron to accordion trigger
-  Square, // Placeholder for Corner Radius Icon
-  Droplet, // Placeholder for Watermark Icon
-  Type, // Icon for Font selection
+  // ChevronDown // Optional: for accordion trigger
+  Square, // Used for Corner Radius & Border
+  Droplet, // Used for Watermark
+  Type, // Used for Font Family
 } from "lucide-react";
 
 // React Hook Form
@@ -201,7 +201,9 @@ const hexToRgba = (hex, opacityPercent) => {
     g = parseInt(hex[3] + hex[4], 16);
     b = parseInt(hex[5] + hex[6], 16);
   } else {
-    return `rgba(255, 255, 255, ${alpha})`; // Default to white if hex is invalid
+    // Default to white if hex is invalid
+    // Consider returning an error or a more noticeable fallback color
+    return `rgba(255, 255, 255, ${alpha})`;
   }
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
@@ -254,6 +256,11 @@ const MainContent = () => {
   const [activeAccordionItem, setActiveAccordionItem] =
     useState("canvas-settings");
   const [imageBorderRadius, setImageBorderRadius] = useState(0); // Percentage
+
+  // == Image Border State ==
+  const [imageBorderEnabled, setImageBorderEnabled] = useState(false);
+  const [imageBorderWidth, setImageBorderWidth] = useState(4); // Pixels
+  const [imageBorderColor, setImageBorderColor] = useState("#000000"); // Default black
 
   // == Watermark State ==
   const [watermarkEnabled, setWatermarkEnabled] = useState(false);
@@ -414,110 +421,128 @@ const MainContent = () => {
       return;
     }
 
-    const previewScaledWidth =
-      loadedImgElement.naturalWidth * imageScale * scaleFactor;
-    const previewScaledHeight =
-      loadedImgElement.naturalHeight * imageScale * scaleFactor;
-    const x = (effectiveCanvasWidth - previewScaledWidth) / 2;
-    const y = (effectiveCanvasHeight - previewScaledHeight) / 2;
-    const actualPreviewRadius =
-      previewScaledWidth > 0 && previewScaledHeight > 0
-        ? (Math.min(previewScaledWidth, previewScaledHeight) *
-            imageBorderRadius) /
-          100
-        : 0;
+    // --- Calculations ---
+    const imgW = loadedImgElement.naturalWidth;
+    const imgH = loadedImgElement.naturalHeight;
+    const scaledImgW = imgW * imageScale * scaleFactor;
+    const scaledImgH = imgH * imageScale * scaleFactor;
 
-    // --- Drawing Image with Shadow and Rounded Corners ---
+    const effectiveBorderWidth = imageBorderEnabled
+      ? Math.max(0, imageBorderWidth * scaleFactor)
+      : 0;
+
+    const totalWidth = scaledImgW + 2 * effectiveBorderWidth;
+    const totalHeight = scaledImgH + 2 * effectiveBorderWidth;
+
+    const outerX = (effectiveCanvasWidth - totalWidth) / 2;
+    const outerY = (effectiveCanvasHeight - totalHeight) / 2;
+
+    const imageX = outerX + effectiveBorderWidth;
+    const imageY = outerY + effectiveBorderWidth;
+
+    const shorterSideInner = Math.min(scaledImgW, scaledImgH);
+    const innerRadius =
+      shorterSideInner > 0 ? (shorterSideInner * imageBorderRadius) / 100 : 0;
+    const outerRadius = innerRadius + effectiveBorderWidth;
+
+    // --- Drawing ---
     ctx.save(); // Save initial state
 
-    // 1. Draw shadow underneath
+    // 1. Draw Shadow (based on outer bounds including border)
     ctx.shadowOffsetX = shadowSettings.offsetX * scaleFactor;
     ctx.shadowOffsetY = shadowSettings.offsetY * scaleFactor;
     ctx.shadowBlur = shadowSettings.blur * scaleFactor;
     ctx.shadowColor = `rgba(0, 0, 0, ${shadowSettings.opacity / 100})`;
     createRoundedRectPath(
       ctx,
-      x,
-      y,
-      previewScaledWidth,
-      previewScaledHeight,
-      actualPreviewRadius
+      outerX,
+      outerY,
+      totalWidth,
+      totalHeight,
+      outerRadius
     );
     ctx.fillStyle = backgroundColor; // Fill to render shadow
     ctx.fill();
-
-    // 2. Reset shadow
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 0;
     ctx.shadowBlur = 0;
-    ctx.shadowColor = "rgba(0,0,0,0)";
+    ctx.shadowColor = "rgba(0,0,0,0)"; // Reset shadow
 
-    // 3. Clip and draw image
+    // 2. Draw Border Fill (if enabled)
+    if (imageBorderEnabled && effectiveBorderWidth > 0) {
+      ctx.fillStyle = imageBorderColor;
+      // Use the same outer path
+      createRoundedRectPath(
+        ctx,
+        outerX,
+        outerY,
+        totalWidth,
+        totalHeight,
+        outerRadius
+      );
+      ctx.fill();
+    }
+
+    // 3. Clip to Inner Area and Draw Image
+    ctx.save(); // Save state before clipping for image
     createRoundedRectPath(
       ctx,
-      x,
-      y,
-      previewScaledWidth,
-      previewScaledHeight,
-      actualPreviewRadius
+      imageX,
+      imageY,
+      scaledImgW,
+      scaledImgH,
+      innerRadius
     );
     ctx.clip();
     try {
-      if (previewScaledWidth > 0 && previewScaledHeight > 0) {
-        ctx.drawImage(
-          loadedImgElement,
-          x,
-          y,
-          previewScaledWidth,
-          previewScaledHeight
-        );
+      if (scaledImgW > 0 && scaledImgH > 0) {
+        ctx.drawImage(loadedImgElement, imageX, imageY, scaledImgW, scaledImgH);
       }
     } catch (e) {
       console.error("Error drawing preview image:", e);
     }
+    ctx.restore(); // Restore state after clipping image (removes clip)
 
-    // --- Draw Watermark (after image, before final restore) ---
-    if (watermarkEnabled && watermarkText && previewScaledHeight > 0) {
-      ctx.save(); // Save context state before drawing watermark
+    // 4. Draw Watermark (if enabled)
+    if (watermarkEnabled && watermarkText && totalHeight > 0) {
+      ctx.save();
 
-      const baseFontSize = previewScaledHeight * (watermarkSizePercent / 100);
-      const fontSize = Math.max(8 * scaleFactor, baseFontSize); // Min effective size 8px on preview
+      const baseFontSize = scaledImgH * (watermarkSizePercent / 100);
+      const fontSize = Math.max(8 * scaleFactor, baseFontSize);
       const padding = fontSize * 0.5;
 
-      ctx.font = `bold ${fontSize}px ${watermarkFontFamily}`; // Use selected font family
+      ctx.font = `bold ${fontSize}px ${watermarkFontFamily}`;
       ctx.fillStyle = hexToRgba(watermarkColor, watermarkOpacity);
       ctx.textAlign = watermarkPosition;
       ctx.textBaseline = "bottom";
 
       let wmX;
-      const wmY = y + previewScaledHeight - padding;
+      const wmY = outerY + totalHeight - padding;
 
       switch (watermarkPosition) {
         case "left":
-          wmX = x + padding;
+          wmX = outerX + padding + effectiveBorderWidth;
           break;
         case "right":
-          wmX = x + previewScaledWidth - padding;
+          wmX = outerX + totalWidth - padding - effectiveBorderWidth;
           break;
         case "center":
         default:
-          wmX = x + previewScaledWidth / 2;
+          wmX = outerX + totalWidth / 2;
           break;
       }
 
-      // Basic check to avoid drawing off-canvas
-      if (wmY > y && wmY < y + previewScaledHeight + fontSize) {
+      if (wmY > 0 && wmY < effectiveCanvasHeight + fontSize) {
         ctx.fillText(watermarkText, wmX, wmY);
       }
 
-      ctx.restore(); // Restore context state after drawing watermark
+      ctx.restore();
     }
-    // --- END: Draw Watermark ---
 
-    // Final restore to remove clipping etc.
+    // Final restore from initial save
     ctx.restore();
   }, [
-    // Added watermark states
+    // Add border states to dependency array
     loadedImgElement,
     imageScale,
     shadowSettings,
@@ -532,7 +557,10 @@ const MainContent = () => {
     watermarkSizePercent,
     watermarkColor,
     watermarkPosition,
-    watermarkFontFamily, // Added font family
+    watermarkFontFamily,
+    imageBorderEnabled,
+    imageBorderWidth,
+    imageBorderColor, // <<< ADDED
   ]);
 
   // == Handlers ==
@@ -544,10 +572,10 @@ const MainContent = () => {
         setUploadedImage(e.target?.result);
         setImageScale(1);
         setImageBorderRadius(0);
-        // Reset watermark on new upload
+        setImageBorderEnabled(false); // Reset border
         setWatermarkEnabled(false);
         setWatermarkText("");
-        setWatermarkFontFamily(WATERMARK_FONTS[0].value); // Reset font too
+        setWatermarkFontFamily(WATERMARK_FONTS[0].value); // Reset font
       };
       reader.onerror = (err) => {
         console.error("Error reading file:", err);
@@ -562,7 +590,7 @@ const MainContent = () => {
     setUploadedImage(null);
     setImageScale(1);
     setImageBorderRadius(0);
-    // Reset watermark as well when clearing image
+    setImageBorderEnabled(false); // Reset border
     setWatermarkEnabled(false);
     setWatermarkText("");
     setWatermarkFontFamily(WATERMARK_FONTS[0].value); // Reset font
@@ -636,100 +664,128 @@ const MainContent = () => {
     ctx.fillStyle = backgroundColor;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    let scaledWidth = loadedImgElement.naturalWidth * imageScale;
-    let scaledHeight = loadedImgElement.naturalHeight * imageScale;
-    const x = (targetWidth - scaledWidth) / 2;
-    const y = (targetHeight - scaledHeight) / 2;
-    const actualDownloadRadius =
-      scaledWidth > 0 && scaledHeight > 0
-        ? (Math.min(scaledWidth, scaledHeight) * imageBorderRadius) / 100
-        : 0;
+    // --- Calculations ---
+    const imgW = loadedImgElement.naturalWidth;
+    const imgH = loadedImgElement.naturalHeight;
+    const scaledImgW = imgW * imageScale;
+    const scaledImgH = imgH * imageScale;
 
-    // --- Drawing Image with Shadow and Rounded Corners (Download) ---
+    const effectiveBorderWidth = imageBorderEnabled
+      ? Math.max(0, imageBorderWidth)
+      : 0;
+
+    const totalWidth = scaledImgW + 2 * effectiveBorderWidth;
+    const totalHeight = scaledImgH + 2 * effectiveBorderWidth;
+
+    const outerX = (targetWidth - totalWidth) / 2;
+    const outerY = (targetHeight - totalHeight) / 2;
+
+    const imageX = outerX + effectiveBorderWidth;
+    const imageY = outerY + effectiveBorderWidth;
+
+    const shorterSideInner = Math.min(scaledImgW, scaledImgH);
+    const innerRadius =
+      shorterSideInner > 0 ? (shorterSideInner * imageBorderRadius) / 100 : 0;
+    const outerRadius = innerRadius + effectiveBorderWidth;
+
+    // --- Drawing ---
     ctx.save(); // Save initial state
 
-    // 1. Draw shadow underneath
+    // 1. Draw Shadow
     ctx.shadowOffsetX = shadowSettings.offsetX;
     ctx.shadowOffsetY = shadowSettings.offsetY;
     ctx.shadowBlur = shadowSettings.blur;
     ctx.shadowColor = `rgba(0, 0, 0, ${shadowSettings.opacity / 100})`;
     createRoundedRectPath(
       ctx,
-      x,
-      y,
-      scaledWidth,
-      scaledHeight,
-      actualDownloadRadius
+      outerX,
+      outerY,
+      totalWidth,
+      totalHeight,
+      outerRadius
     );
     ctx.fillStyle = backgroundColor;
     ctx.fill();
-
-    // 2. Reset shadow
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 0;
     ctx.shadowBlur = 0;
     ctx.shadowColor = "rgba(0,0,0,0)";
 
-    // 3. Clip and draw image
+    // 2. Draw Border Fill
+    if (imageBorderEnabled && effectiveBorderWidth > 0) {
+      ctx.fillStyle = imageBorderColor;
+      createRoundedRectPath(
+        ctx,
+        outerX,
+        outerY,
+        totalWidth,
+        totalHeight,
+        outerRadius
+      );
+      ctx.fill();
+    }
+
+    // 3. Clip and Draw Image
+    ctx.save(); // Save before image clip
     createRoundedRectPath(
       ctx,
-      x,
-      y,
-      scaledWidth,
-      scaledHeight,
-      actualDownloadRadius
+      imageX,
+      imageY,
+      scaledImgW,
+      scaledImgH,
+      innerRadius
     );
     ctx.clip();
     try {
-      if (scaledWidth > 0 && scaledHeight > 0) {
-        ctx.drawImage(loadedImgElement, x, y, scaledWidth, scaledHeight);
+      if (scaledImgW > 0 && scaledImgH > 0) {
+        ctx.drawImage(loadedImgElement, imageX, imageY, scaledImgW, scaledImgH);
       }
     } catch (e) {
       console.error("Error drawing image onto download canvas:", e);
       alert("Error: Failed to draw the image for download.");
-      ctx.restore();
+      ctx.restore(); // Restore from image clip save
+      ctx.restore(); // Restore from initial save
       return;
     }
+    ctx.restore(); // Restore from image clip save
 
-    // --- Draw Watermark (Download) ---
-    if (watermarkEnabled && watermarkText && scaledHeight > 0) {
-      ctx.save(); // Save context state before drawing watermark (clip is still active)
+    // 4. Draw Watermark
+    if (watermarkEnabled && watermarkText && totalHeight > 0) {
+      ctx.save();
 
-      const baseFontSize = scaledHeight * (watermarkSizePercent / 100);
-      const fontSize = Math.max(8, baseFontSize); // Minimum size 8px
+      const baseFontSize = scaledImgH * (watermarkSizePercent / 100); // Relative to image height
+      const fontSize = Math.max(8, baseFontSize);
       const padding = fontSize * 0.5;
 
-      ctx.font = `bold ${fontSize}px ${watermarkFontFamily}`; // Use selected font family
+      ctx.font = `bold ${fontSize}px ${watermarkFontFamily}`;
       ctx.fillStyle = hexToRgba(watermarkColor, watermarkOpacity);
       ctx.textAlign = watermarkPosition;
       ctx.textBaseline = "bottom";
 
       let wmX;
-      const wmY = y + scaledHeight - padding;
+      const wmY = outerY + totalHeight - padding; // Relative to outer edge
 
       switch (watermarkPosition) {
         case "left":
-          wmX = x + padding;
+          wmX = outerX + padding + effectiveBorderWidth;
           break;
         case "right":
-          wmX = x + scaledWidth - padding;
+          wmX = outerX + totalWidth - padding - effectiveBorderWidth;
           break;
         case "center":
         default:
-          wmX = x + scaledWidth / 2;
+          wmX = outerX + totalWidth / 2;
           break;
       }
 
-      // Basic check to avoid drawing off-canvas
-      if (wmY > y && wmY < y + scaledHeight + fontSize) {
+      if (wmY > 0 && wmY < targetHeight + fontSize) {
         ctx.fillText(watermarkText, wmX, wmY);
       }
 
-      ctx.restore(); // Restore context state after drawing watermark (clip becomes active again)
+      ctx.restore();
     }
-    // --- END: Draw Watermark ---
 
-    // Final restore to remove clipping etc.
+    // Final restore
     ctx.restore();
 
     // --- Generate and trigger download link ---
@@ -741,9 +797,13 @@ const MainContent = () => {
       const link = document.createElement("a");
       const radiusString =
         imageBorderRadius > 0 ? `-r${imageBorderRadius}` : "";
+      const borderString =
+        imageBorderEnabled && imageBorderWidth > 0
+          ? `-b${imageBorderWidth}`
+          : "";
       const watermarkString =
         watermarkEnabled && watermarkText ? "-watermarked" : "";
-      link.download = `Walli-image-${targetWidth}x${targetHeight}${radiusString}${watermarkString}.png`;
+      link.download = `Walli-image-${targetWidth}x${targetHeight}${radiusString}${borderString}${watermarkString}.png`;
       link.href = dataUrl;
       document.body.appendChild(link);
       link.click();
@@ -1220,7 +1280,6 @@ const MainContent = () => {
                                 className="flex items-center gap-2 text-sm font-medium text-foreground"
                               >
                                 <Square className="h-4 w-4 text-muted-foreground" />{" "}
-                                {/* Using Square icon */}
                                 Corner Radius
                               </label>
                               <span className="text-sm font-mono w-16 text-right text-muted-foreground">
@@ -1254,12 +1313,83 @@ const MainContent = () => {
                             />
                           </div>
 
+                          {/* --- Border Controls --- */}
+                          <Card className="border border-border/40 p-4 space-y-4 bg-accent/10">
+                            <div className="flex items-center justify-between">
+                              <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                                <Square className="h-4 w-4 text-muted-foreground" />{" "}
+                                Image Border
+                              </label>
+                              <Button
+                                size="sm"
+                                variant={
+                                  imageBorderEnabled ? "secondary" : "outline"
+                                }
+                                onClick={() =>
+                                  setImageBorderEnabled(!imageBorderEnabled)
+                                }
+                              >
+                                {imageBorderEnabled ? "Enabled" : "Disabled"}
+                              </Button>
+                            </div>
+                            {imageBorderEnabled && (
+                              <div className="space-y-4 pt-2 border-t border-border/20">
+                                <div className="space-y-1.5">
+                                  <Label htmlFor="image-border-width">
+                                    Width ({imageBorderWidth}px)
+                                  </Label>
+                                  <Slider
+                                    id="image-border-width"
+                                    min={0}
+                                    max={30}
+                                    step={1} // Adjust max width as needed
+                                    value={[imageBorderWidth]}
+                                    onValueChange={(val) =>
+                                      setImageBorderWidth(val[0])
+                                    }
+                                  />
+                                </div>
+                                <div className="space-y-1.5">
+                                  <Label>Color</Label>
+                                  <div className="flex items-center gap-3">
+                                    <input
+                                      type="color"
+                                      className="w-10 h-10 border-none cursor-pointer p-0 rounded bg-transparent"
+                                      value={imageBorderColor}
+                                      onChange={(e) =>
+                                        setImageBorderColor(e.target.value)
+                                      }
+                                      style={{
+                                        backgroundColor: imageBorderColor,
+                                        border:
+                                          imageBorderColor.toLowerCase() >
+                                          "#eeeeee"
+                                            ? "1px solid #ccc"
+                                            : "none",
+                                      }}
+                                      title="Border Color"
+                                    />
+                                    <Input
+                                      type="text"
+                                      className="w-24 font-mono text-sm h-10"
+                                      placeholder="#000000"
+                                      value={imageBorderColor}
+                                      onChange={(e) =>
+                                        setImageBorderColor(e.target.value)
+                                      }
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </Card>
+                          {/* --- END: Border Controls --- */}
+
                           {/* --- Watermark Controls --- */}
                           <Card className="border border-border/40 p-4 space-y-4 bg-accent/10">
                             <div className="flex items-center justify-between">
                               <label className="text-sm font-medium text-foreground flex items-center gap-2">
                                 <Droplet className="h-4 w-4 text-muted-foreground" />{" "}
-                                {/* Using Droplet icon */}
                                 Watermark
                               </label>
                               <Button
@@ -1274,10 +1404,8 @@ const MainContent = () => {
                                 {watermarkEnabled ? "Enabled" : "Disabled"}
                               </Button>
                             </div>
-
                             {watermarkEnabled && (
                               <div className="space-y-4 pt-2 border-t border-border/20">
-                                {/* Watermark Text */}
                                 <div className="space-y-1.5">
                                   <Label htmlFor="watermark-text">Text</Label>
                                   <Input
@@ -1290,8 +1418,6 @@ const MainContent = () => {
                                     }
                                   />
                                 </div>
-
-                                {/* Opacity & Size Sliders */}
                                 <div className="grid grid-cols-2 gap-4">
                                   <div className="space-y-1.5">
                                     <Label htmlFor="watermark-opacity">
@@ -1324,8 +1450,6 @@ const MainContent = () => {
                                     />
                                   </div>
                                 </div>
-
-                                {/* Color Picker */}
                                 <div className="space-y-1.5">
                                   <Label>Color</Label>
                                   <div className="flex items-center gap-3">
@@ -1357,16 +1481,14 @@ const MainContent = () => {
                                     />
                                   </div>
                                 </div>
-
-                                {/* Font Selection Dropdown */}
                                 <div className="space-y-1.5">
                                   <Label
                                     htmlFor="watermark-font"
                                     className="flex items-center gap-2"
                                   >
+                                    {" "}
                                     <Type className="h-4 w-4 text-muted-foreground" />{" "}
-                                    {/* Font Icon */}
-                                    Font Family
+                                    Font Family{" "}
                                   </Label>
                                   <select
                                     id="watermark-font"
@@ -1381,17 +1503,15 @@ const MainContent = () => {
                                         key={font.value}
                                         value={font.value}
                                       >
-                                        {font.name}
+                                        {" "}
+                                        {font.name}{" "}
                                       </option>
                                     ))}
                                   </select>
                                 </div>
-
-                                {/* Position Buttons */}
                                 <div className="space-y-1.5">
                                   <Label>Position</Label>
                                   <div className="flex gap-2">
-                                    {/* Corrected Line */}
                                     {["left", "center", "right"].map((pos) => (
                                       <Button
                                         key={pos}
