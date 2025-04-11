@@ -2,6 +2,7 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Upload, Download, X, Image as ImageIcon } from "lucide-react";
+import { InteractiveHoverButton } from "@/components/magicui/interactive-hover-button";
 
 const ImagePreview = ({
   uploadedImage,
@@ -12,7 +13,7 @@ const ImagePreview = ({
   backgroundColor,
   maxVisualWidth,
   dimensions,
-  formErrors, // Pass form errors to disable download if dimensions invalid
+  formErrors,
   triggerFileInput,
   clearImage,
   handleDownload,
@@ -31,6 +32,7 @@ const ImagePreview = ({
       <CardContent className="space-y-4">
         <Card className="border border-border/40 overflow-hidden">
           <CardContent
+            // canvas bg element
             className="p-4 sm:p-6 flex items-center justify-center bg-muted/20"
             style={{ minHeight: "250px" }}
           >
@@ -109,7 +111,7 @@ const ImagePreview = ({
               : "Upload an image to start."}
           </p>
           {uploadedImage ? (
-            <Button
+            <InteractiveHoverButton
               variant="default"
               onClick={handleDownload}
               disabled={
@@ -121,17 +123,17 @@ const ImagePreview = ({
               }
               className="flex items-center gap-2"
             >
-              <Download className="h-4 w-4" /> Download PNG
-            </Button>
+              Download PNG
+            </InteractiveHoverButton>
           ) : (
-            <Button
+            <InteractiveHoverButton
               variant="outline"
               onClick={triggerFileInput}
               disabled={isLoadingImage}
               className="flex items-center gap-2"
             >
-              <Upload className="h-4 w-4" /> Upload Image
-            </Button>
+              Upload Image
+            </InteractiveHoverButton>
           )}
         </div>
       </CardContent>

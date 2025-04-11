@@ -1,170 +1,26 @@
 import React, { useState, useEffect, useRef } from "react";
 import wallilogo from "@/assets/wallilogo.png";
 
-// UI Components
-import { Input } from "@/components/ui/input";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+// Child Components (Ensure these exist in the same directory or update paths)
+import CanvasSettings from "./CanvasSettings";
+import ImagePreview from "./ImagePreview";
+import ImageAdjustmentControls from "./ImageAdjustmentControls";
+
+// UI Components (Only those needed directly by MainContent)
+import { Card } from "@/components/ui/card";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "@/components/ui/accordion"; // Ensure all Accordion parts are imported
-import { Label } from "@/components/ui/label";
+} from "@/components/ui/accordion";
+import { Settings as SettingsIcon, Wand2 } from "lucide-react";
 
-// Icons
-import {
-  X,
-  Upload,
-  Scale,
-  Palette,
-  Download,
-  Image as ImageIcon,
-  Settings as SettingsIcon,
-  Wand2,
-  Square, // Used for Corner Radius & Border
-  Droplet, // Used for Watermark
-  Type, // Used for Font Family
-  Wind, // Icon for Shadow
-} from "lucide-react";
+// Magic UI
+import { Meteors } from "@/components/magicui/meteors"; // Adjusted path assumption
 
 // React Hook Form
 import { useForm } from "react-hook-form";
-import { Switch } from "../ui/switch";
-
-// --- ShadowControl Component (Unchanged) ---
-const ShadowControl = ({ defaultValues, onChange }) => {
-  const [settings, setSettings] = useState(defaultValues);
-  useEffect(() => {
-    setSettings(defaultValues);
-  }, [defaultValues]);
-  const handleChange = (key, value) => {
-    const newValue =
-      typeof value === "number" ? value : parseInt(value, 10) || 0;
-    const newSettings = { ...settings, [key]: newValue };
-    setSettings(newSettings);
-    onChange(newSettings);
-  };
-  const getId = (key) => `shadow-control-${key}-${React.useId()}`;
-  const minMaxOffset = 50;
-  return (
-    <Card className="border border-border/40 p-4 space-y-4 bg-accent/10">
-      <div className="grid grid-cols-2 gap-x-4 gap-y-6">
-        <div className="space-y-2">
-          <label
-            htmlFor={getId("offsetX")}
-            className="text-xs font-medium text-muted-foreground"
-          >
-            Offset X ({settings.offsetX}px)
-          </label>
-          <Slider
-            id={getId("offsetX")}
-            min={-minMaxOffset}
-            max={minMaxOffset}
-            step={1}
-            value={[settings.offsetX]}
-            onValueChange={(val) => handleChange("offsetX", val[0])}
-            aria-label="Shadow Offset X"
-          />
-        </div>
-        <div className="space-y-2">
-          <label
-            htmlFor={getId("offsetY")}
-            className="text-xs font-medium text-muted-foreground"
-          >
-            Offset Y ({settings.offsetY}px)
-          </label>
-          <Slider
-            id={getId("offsetY")}
-            min={-minMaxOffset}
-            max={minMaxOffset}
-            step={1}
-            value={[settings.offsetY]}
-            onValueChange={(val) => handleChange("offsetY", val[0])}
-            aria-label="Shadow Offset Y"
-          />
-        </div>
-        <div className="space-y-2">
-          <label
-            htmlFor={getId("blur")}
-            className="text-xs font-medium text-muted-foreground"
-          >
-            Blur ({settings.blur}px)
-          </label>
-          <Slider
-            id={getId("blur")}
-            min={0}
-            max={50}
-            step={1}
-            value={[settings.blur]}
-            onValueChange={(val) => handleChange("blur", val[0])}
-            aria-label="Shadow Blur"
-          />
-        </div>
-        <div className="space-y-2">
-          <label
-            htmlFor={getId("opacity")}
-            className="text-xs font-medium text-muted-foreground"
-          >
-            Opacity ({settings.opacity}%)
-          </label>
-          <Slider
-            id={getId("opacity")}
-            min={0}
-            max={100}
-            step={1}
-            value={[settings.opacity]}
-            onValueChange={(val) => handleChange("opacity", val[0])}
-            aria-label="Shadow Opacity"
-          />
-        </div>
-      </div>
-    </Card>
-  );
-};
-
-// --- Presets Data (Unchanged) ---
-const DIMENSION_PRESETS = [
-  {
-    name: "Instagram Post",
-    width: 1080,
-    height: 1080,
-    category: "Social Media",
-  },
-  {
-    name: "Instagram Story",
-    width: 1080,
-    height: 1920,
-    category: "Social Media",
-  },
-  { name: "Facebook Post", width: 1200, height: 630, category: "Social Media" },
-  { name: "Twitter Post", width: 1200, height: 675, category: "Social Media" },
-  { name: "YouTube Thumbnail", width: 1280, height: 720, category: "Video" },
-  { name: "HD (1080p)", width: 1920, height: 1080, category: "Video" },
-  { name: "4K UHD", width: 3840, height: 2160, category: "Video" },
-  { name: "A4 Print", width: 2480, height: 3508, category: "Print" },
-  { name: "US Letter", width: 2550, height: 3300, category: "Print" },
-];
-const GROUPED_PRESETS = DIMENSION_PRESETS.reduce((acc, preset) => {
-  const category = preset.category || "Other";
-  if (!acc[category]) {
-    acc[category] = [];
-  }
-  acc[category].push(preset);
-  return acc;
-}, {});
 
 // --- Helper function for Rounded Rect Path ---
 const createRoundedRectPath = (ctx, x, y, width, height, radius) => {
@@ -202,7 +58,7 @@ const hexToRgba = (hex, opacityPercent) => {
     g = parseInt(hex[3] + hex[4], 16);
     b = parseInt(hex[5] + hex[6], 16);
   } else {
-    return `rgba(255, 255, 255, ${alpha})`; // Default to white if hex is invalid
+    return `rgba(255, 255, 255, ${alpha})`;
   }
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
@@ -221,10 +77,32 @@ const WATERMARK_FONTS = [
   { name: "Zen Loop", value: '"Zen Loop", display' },
   { name: "Festive", value: '"Festive", cursive' },
   { name: "Comforter Brush", value: '"Comforter Brush", cursive' },
-  // Add more fonts here if desired (ensure they are loaded via CSS/HTML if not web-safe)
 ];
 
-// --- Main Component ---
+// Presets Data
+const DIMENSION_PRESETS = [
+  {
+    name: "Instagram Post",
+    width: 1080,
+    height: 1080,
+    category: "Social Media",
+  },
+  {
+    name: "Instagram Story",
+    width: 1080,
+    height: 1920,
+    category: "Social Media",
+  },
+  { name: "Facebook Post", width: 1200, height: 630, category: "Social Media" },
+  { name: "Twitter Post", width: 1200, height: 675, category: "Social Media" },
+  { name: "YouTube Thumbnail", width: 1280, height: 720, category: "Video" },
+  { name: "HD (1080p)", width: 1920, height: 1080, category: "Video" },
+  { name: "4K UHD", width: 3840, height: 2160, category: "Video" },
+  { name: "A4 Print", width: 2480, height: 3508, category: "Print" },
+  { name: "US Letter", width: 2550, height: 3300, category: "Print" },
+];
+
+// --- Main Component (Parent) ---
 const MainContent = () => {
   // == State Variables ==
   const form = useForm({
@@ -253,15 +131,11 @@ const MainContent = () => {
   });
   const [isLoadingImage, setIsLoadingImage] = useState(false);
   const [activeAccordionItem, setActiveAccordionItem] =
-    useState("canvas-settings"); // Controls outer accordion
+    useState("canvas-settings");
   const [imageBorderRadius, setImageBorderRadius] = useState(0);
-
-  // == Image Border State ==
   const [imageBorderEnabled, setImageBorderEnabled] = useState(false);
   const [imageBorderWidth, setImageBorderWidth] = useState(4);
   const [imageBorderColor, setImageBorderColor] = useState("#000000");
-
-  // == Watermark State ==
   const [watermarkEnabled, setWatermarkEnabled] = useState(false);
   const [watermarkText, setWatermarkText] = useState("");
   const [watermarkOpacity, setWatermarkOpacity] = useState(50);
@@ -353,7 +227,7 @@ const MainContent = () => {
       }
     });
     return () => subscription.unsubscribe();
-  }, [form.watch, form.getFieldState, dimensions.width, dimensions.height]);
+  }, [form, dimensions.width, dimensions.height]);
 
   // Effect 2: Load Image Element & Control Accordion State
   useEffect(() => {
@@ -366,7 +240,6 @@ const MainContent = () => {
     let isCancelled = false;
     setIsLoadingImage(true);
     setLoadedImgElement(null);
-
     const img = new Image();
     img.onload = () => {
       if (!isCancelled) {
@@ -376,13 +249,12 @@ const MainContent = () => {
       }
     };
     img.onerror = () => {
-      console.error("Error loading image source");
       if (!isCancelled) {
         setLoadedImgElement(null);
         setIsLoadingImage(false);
         setUploadedImage(null);
         setActiveAccordionItem("canvas-settings");
-        alert("Error loading image. Please try a different file.");
+        alert("Error loading image.");
       }
     };
     img.src = uploadedImage;
@@ -403,12 +275,9 @@ const MainContent = () => {
 
     const effectiveCanvasWidth = Math.max(1, canvasWidth);
     const effectiveCanvasHeight = Math.max(1, canvasHeight);
-
     canvas.width = effectiveCanvasWidth;
     canvas.height = effectiveCanvasHeight;
     ctx.clearRect(0, 0, effectiveCanvasWidth, effectiveCanvasHeight);
-
-    // Draw background
     ctx.fillStyle = backgroundColor;
     ctx.fillRect(0, 0, effectiveCanvasWidth, effectiveCanvasHeight);
 
@@ -420,34 +289,28 @@ const MainContent = () => {
       return;
     }
 
-    // --- Calculations ---
+    // Calculations
     const imgW = loadedImgElement.naturalWidth;
     const imgH = loadedImgElement.naturalHeight;
     const scaledImgW = imgW * imageScale * scaleFactor;
     const scaledImgH = imgH * imageScale * scaleFactor;
-
     const effectiveBorderWidth = imageBorderEnabled
       ? Math.max(0, imageBorderWidth * scaleFactor)
       : 0;
-
     const totalWidth = scaledImgW + 2 * effectiveBorderWidth;
     const totalHeight = scaledImgH + 2 * effectiveBorderWidth;
-
     const outerX = (effectiveCanvasWidth - totalWidth) / 2;
     const outerY = (effectiveCanvasHeight - totalHeight) / 2;
-
     const imageX = outerX + effectiveBorderWidth;
     const imageY = outerY + effectiveBorderWidth;
-
     const shorterSideInner = Math.min(scaledImgW, scaledImgH);
     const innerRadius =
       shorterSideInner > 0 ? (shorterSideInner * imageBorderRadius) / 100 : 0;
     const outerRadius = innerRadius + effectiveBorderWidth;
 
-    // --- Drawing ---
-    ctx.save(); // Save initial state
-
-    // 1. Draw Shadow (based on outer bounds including border)
+    // Drawing
+    ctx.save();
+    // 1. Shadow
     ctx.shadowOffsetX = shadowSettings.offsetX * scaleFactor;
     ctx.shadowOffsetY = shadowSettings.offsetY * scaleFactor;
     ctx.shadowBlur = shadowSettings.blur * scaleFactor;
@@ -460,17 +323,15 @@ const MainContent = () => {
       totalHeight,
       outerRadius
     );
-    ctx.fillStyle = backgroundColor; // Fill to render shadow
+    ctx.fillStyle = backgroundColor;
     ctx.fill();
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 0;
     ctx.shadowBlur = 0;
-    ctx.shadowColor = "rgba(0,0,0,0)"; // Reset shadow
-
-    // 2. Draw Border Fill (if enabled)
+    ctx.shadowColor = "rgba(0,0,0,0)";
+    // 2. Border
     if (imageBorderEnabled && effectiveBorderWidth > 0) {
       ctx.fillStyle = imageBorderColor;
-      // Use the same outer path
       createRoundedRectPath(
         ctx,
         outerX,
@@ -481,9 +342,8 @@ const MainContent = () => {
       );
       ctx.fill();
     }
-
-    // 3. Clip to Inner Area and Draw Image
-    ctx.save(); // Save state before clipping for image
+    // 3. Image
+    ctx.save();
     createRoundedRectPath(
       ctx,
       imageX,
@@ -494,30 +354,24 @@ const MainContent = () => {
     );
     ctx.clip();
     try {
-      if (scaledImgW > 0 && scaledImgH > 0) {
+      if (scaledImgW > 0 && scaledImgH > 0)
         ctx.drawImage(loadedImgElement, imageX, imageY, scaledImgW, scaledImgH);
-      }
     } catch (e) {
       console.error("Error drawing preview image:", e);
     }
-    ctx.restore(); // Restore state after clipping image (removes clip)
-
-    // 4. Draw Watermark (if enabled)
+    ctx.restore();
+    // 4. Watermark
     if (watermarkEnabled && watermarkText && totalHeight > 0) {
       ctx.save();
-
       const baseFontSize = scaledImgH * (watermarkSizePercent / 100);
       const fontSize = Math.max(8 * scaleFactor, baseFontSize);
       const padding = fontSize * 0.5;
-
       ctx.font = `bold ${fontSize}px ${watermarkFontFamily}`;
       ctx.fillStyle = hexToRgba(watermarkColor, watermarkOpacity);
       ctx.textAlign = watermarkPosition;
       ctx.textBaseline = "bottom";
-
       let wmX;
       const wmY = outerY + totalHeight - padding;
-
       switch (watermarkPosition) {
         case "left":
           wmX = outerX + padding + effectiveBorderWidth;
@@ -530,18 +384,13 @@ const MainContent = () => {
           wmX = outerX + totalWidth / 2;
           break;
       }
-
-      if (wmY > 0 && wmY < effectiveCanvasHeight + fontSize) {
+      if (wmY > 0 && wmY < effectiveCanvasHeight + fontSize)
         ctx.fillText(watermarkText, wmX, wmY);
-      }
-
       ctx.restore();
     }
-
-    // Final restore from initial save
-    ctx.restore();
+    ctx.restore(); // Final restore
   }, [
-    // Added all relevant states
+    // Dependencies
     loadedImgElement,
     imageScale,
     shadowSettings,
@@ -571,10 +420,10 @@ const MainContent = () => {
         setUploadedImage(e.target?.result);
         setImageScale(1);
         setImageBorderRadius(0);
-        setImageBorderEnabled(false); // Reset border
+        setImageBorderEnabled(false);
         setWatermarkEnabled(false);
         setWatermarkText("");
-        setWatermarkFontFamily(WATERMARK_FONTS[0].value); // Reset font
+        setWatermarkFontFamily(WATERMARK_FONTS[0].value);
       };
       reader.onerror = (err) => {
         console.error("Error reading file:", err);
@@ -589,10 +438,10 @@ const MainContent = () => {
     setUploadedImage(null);
     setImageScale(1);
     setImageBorderRadius(0);
-    setImageBorderEnabled(false); // Reset border
+    setImageBorderEnabled(false);
     setWatermarkEnabled(false);
     setWatermarkText("");
-    setWatermarkFontFamily(WATERMARK_FONTS[0].value); // Reset font
+    setWatermarkFontFamily(WATERMARK_FONTS[0].value);
   };
 
   const triggerFileInput = () => {
@@ -610,14 +459,10 @@ const MainContent = () => {
         shouldValidate: true,
         shouldDirty: true,
       });
-      setDimensions({ width: preset.width, height: preset.height });
     }
   };
 
-  const handleScaleChange = (value) => {
-    setImageScale(value?.[0] ?? 1);
-  };
-
+  // handleDownload
   const handleDownload = () => {
     if (!loadedImgElement || !dimensions.width || !dimensions.height) {
       console.warn("Download cancelled: Missing image or dimensions");
@@ -636,7 +481,7 @@ const MainContent = () => {
       targetWidth * targetHeight > 268435456
     ) {
       alert(
-        `Error: Canvas dimensions (${targetWidth}x${targetHeight}) are too large to download reliably. Please reduce the size.`
+        `Error: Canvas dimensions (${targetWidth}x${targetHeight}) are too large...`
       );
       return;
     }
@@ -647,50 +492,40 @@ const MainContent = () => {
       canvas.height = targetHeight;
     } catch (e) {
       console.error("Error setting canvas dimensions:", e);
-      alert(
-        `Error: Could not create canvas of size ${targetWidth}x${targetHeight}. Please try smaller dimensions.`
-      );
+      alert(`Error: Could not create canvas...`);
       return;
     }
     const ctx = canvas.getContext("2d");
     if (!ctx) {
       console.error("Could not get 2D context for download canvas");
-      alert("Error: Could not create the download image.");
+      alert("Error: Could not create download image.");
       return;
     }
 
-    // Draw background
-    ctx.fillStyle = backgroundColor;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // --- Calculations ---
+    // Calculations (Download)
     const imgW = loadedImgElement.naturalWidth;
     const imgH = loadedImgElement.naturalHeight;
     const scaledImgW = imgW * imageScale;
     const scaledImgH = imgH * imageScale;
-
     const effectiveBorderWidth = imageBorderEnabled
       ? Math.max(0, imageBorderWidth)
       : 0;
-
     const totalWidth = scaledImgW + 2 * effectiveBorderWidth;
     const totalHeight = scaledImgH + 2 * effectiveBorderWidth;
-
     const outerX = (targetWidth - totalWidth) / 2;
     const outerY = (targetHeight - totalHeight) / 2;
-
     const imageX = outerX + effectiveBorderWidth;
     const imageY = outerY + effectiveBorderWidth;
-
     const shorterSideInner = Math.min(scaledImgW, scaledImgH);
     const innerRadius =
       shorterSideInner > 0 ? (shorterSideInner * imageBorderRadius) / 100 : 0;
     const outerRadius = innerRadius + effectiveBorderWidth;
 
-    // --- Drawing ---
-    ctx.save(); // Save initial state
-
-    // 1. Draw Shadow
+    // Drawing (Download)
+    ctx.fillStyle = backgroundColor;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.save();
+    // 1. Shadow
     ctx.shadowOffsetX = shadowSettings.offsetX;
     ctx.shadowOffsetY = shadowSettings.offsetY;
     ctx.shadowBlur = shadowSettings.blur;
@@ -709,8 +544,7 @@ const MainContent = () => {
     ctx.shadowOffsetY = 0;
     ctx.shadowBlur = 0;
     ctx.shadowColor = "rgba(0,0,0,0)";
-
-    // 2. Draw Border Fill
+    // 2. Border
     if (imageBorderEnabled && effectiveBorderWidth > 0) {
       ctx.fillStyle = imageBorderColor;
       createRoundedRectPath(
@@ -723,9 +557,8 @@ const MainContent = () => {
       );
       ctx.fill();
     }
-
-    // 3. Clip and Draw Image
-    ctx.save(); // Save before image clip
+    // 3. Image
+    ctx.save();
     createRoundedRectPath(
       ctx,
       imageX,
@@ -736,34 +569,28 @@ const MainContent = () => {
     );
     ctx.clip();
     try {
-      if (scaledImgW > 0 && scaledImgH > 0) {
+      if (scaledImgW > 0 && scaledImgH > 0)
         ctx.drawImage(loadedImgElement, imageX, imageY, scaledImgW, scaledImgH);
-      }
     } catch (e) {
-      console.error("Error drawing image onto download canvas:", e);
-      alert("Error: Failed to draw the image for download.");
-      ctx.restore(); // Restore from image clip save
-      ctx.restore(); // Restore from initial save
+      console.error("Error drawing image:", e);
+      alert("Error drawing image.");
+      ctx.restore();
+      ctx.restore();
       return;
     }
-    ctx.restore(); // Restore from image clip save
-
-    // 4. Draw Watermark
+    ctx.restore();
+    // 4. Watermark
     if (watermarkEnabled && watermarkText && totalHeight > 0) {
       ctx.save();
-
       const baseFontSize = scaledImgH * (watermarkSizePercent / 100);
       const fontSize = Math.max(8, baseFontSize);
       const padding = fontSize * 0.5;
-
       ctx.font = `bold ${fontSize}px ${watermarkFontFamily}`;
       ctx.fillStyle = hexToRgba(watermarkColor, watermarkOpacity);
       ctx.textAlign = watermarkPosition;
       ctx.textBaseline = "bottom";
-
       let wmX;
       const wmY = outerY + totalHeight - padding;
-
       switch (watermarkPosition) {
         case "left":
           wmX = outerX + padding + effectiveBorderWidth;
@@ -776,23 +603,17 @@ const MainContent = () => {
           wmX = outerX + totalWidth / 2;
           break;
       }
-
-      if (wmY > 0 && wmY < targetHeight + fontSize) {
+      if (wmY > 0 && wmY < targetHeight + fontSize)
         ctx.fillText(watermarkText, wmX, wmY);
-      }
-
       ctx.restore();
     }
+    ctx.restore(); // Final restore
 
-    // Final restore
-    ctx.restore();
-
-    // --- Generate and trigger download link ---
+    // Generate Link
     try {
       const dataUrl = canvas.toDataURL("image/png");
-      if (dataUrl.length < 10) {
+      if (dataUrl.length < 10)
         throw new Error("Generated Data URL is too short or invalid.");
-      }
       const link = document.createElement("a");
       const radiusString =
         imageBorderRadius > 0 ? `-r${imageBorderRadius}` : "";
@@ -808,33 +629,37 @@ const MainContent = () => {
       link.click();
       document.body.removeChild(link);
     } catch (error) {
-      console.error("Error generating or triggering download link:", error);
+      console.error("Error generating link:", error);
       if (
         error.name === "SecurityError" ||
-        error.message.includes("Data URL") ||
         error.message.includes("too large")
       ) {
-        alert(
-          "Error: The generated image is too large to download directly. Please try smaller dimensions or use a different browser."
-        );
+        alert("Error: Image too large to download directly.");
       } else {
-        alert(
-          "Error: Could not generate the download file. The canvas size might be too large."
-        );
+        alert("Error: Could not generate download file.");
       }
     }
   };
 
   // == JSX Structure ==
   return (
-    <main className="flex-1 w-full bg-background font-Funnel">
-      <div className="container max-w-7xl mx-auto p-4 lg:p-8 h-full">
+    // ADD relative, overflow-hidden, and min-h-screen to main
+    <main className="relative flex-1 w-full  font-Funnel overflow-hidden ">
+      {/* ADD Meteors component here */}
+      <Meteors number={140} />
+      {/* ADD relative and z-10 to container */}
+      <div className="relative z-10 container max-w-7xl mx-auto p-4 lg:p-8 ">
         {/* Header */}
-        <div className="flex items-center justify-start mb-6 mt-12 lg:mt-0">
-          <img src={wallilogo} alt="Walli" className="h-12 pr-2" />
-          <h2 className="text-3xl font-bold tracking-tight font-Almendra ">
-            Walli
-          </h2>
+        <div className="flex items-center justify-start mb-4 mt-4 lg:mt-0">
+          <img src={wallilogo} alt="Walli" className="h-14 pr-2" />
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight font-Almendra ">
+              Walli
+            </h2>
+            <h2 className="font-xs text-muted-foreground font-Yuji tracking-tight font-bold">
+              <a href="https://www.shaonannafi.me/"> Shaon An Nafi</a>
+            </h2>
+          </div>
         </div>
         <input
           type="file"
@@ -846,131 +671,25 @@ const MainContent = () => {
         {/* Layout */}
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Left Column: Preview */}
-          <div className="flex-1 w-full space-y-6 lg:sticky lg:top-8 lg:h-[calc(100vh-4rem)] lg:overflow-y-auto">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-xl flex items-center gap-2">
-                  <ImageIcon className="h-5 w-5" />
-                  Preview
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Card className="border border-border/40 overflow-hidden">
-                  <CardContent
-                    className="p-4 sm:p-6 flex items-center justify-center bg-muted/20"
-                    style={{ minHeight: "250px" }}
-                  >
-                    <div
-                      className={`relative border border-dashed border-border/50 rounded-md transition-colors duration-200 ease-in-out flex items-center justify-center overflow-hidden shadow-inner w-full ${
-                        !uploadedImage && !isLoadingImage
-                          ? "cursor-pointer hover:bg-accent/50"
-                          : ""
-                      }`}
-                      style={{
-                        aspectRatio: `${targetAspectRatio}`,
-                        backgroundColor: !uploadedImage
-                          ? backgroundColor
-                          : "transparent",
-                        maxWidth: `${maxVisualWidth}px`,
-                        margin: "0 auto",
-                      }}
-                      onClick={
-                        !uploadedImage && !isLoadingImage
-                          ? triggerFileInput
-                          : undefined
-                      }
-                      title={
-                        !uploadedImage && !isLoadingImage
-                          ? "Click to upload image"
-                          : "Image Preview"
-                      }
-                    >
-                      {isLoadingImage && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm z-20">
-                          <p className="text-white text-sm animate-pulse">
-                            Loading...
-                          </p>
-                        </div>
-                      )}
-                      {uploadedImage ? (
-                        <canvas
-                          ref={previewCanvasRef}
-                          className={isLoadingImage ? "opacity-50" : ""}
-                          style={{
-                            display: "block",
-                            width: "100%",
-                            height: "100%",
-                            transition: "opacity 0.2s ease-in-out",
-                          }}
-                        />
-                      ) : (
-                        !isLoadingImage && (
-                          <div className="flex flex-col items-center text-center text-muted-foreground p-4">
-                            {" "}
-                            <Upload className="h-10 w-10 mb-2 opacity-50" />{" "}
-                            <span className="text-sm font-medium">
-                              Click to Upload Image
-                            </span>{" "}
-                          </div>
-                        )
-                      )}
-                      {uploadedImage && !isLoadingImage && (
-                        <Button
-                          size="icon"
-                          variant="destructive"
-                          className="absolute top-1 right-1 h-7 w-7 z-10 opacity-60 hover:opacity-100 rounded-full"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            clearImage();
-                          }}
-                          title="Remove image"
-                        >
-                          {" "}
-                          <X className="h-4 w-4" />{" "}
-                        </Button>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-                <div className="flex justify-between items-center flex-wrap gap-2 pt-2">
-                  <p className="text-xs text-muted-foreground flex-1 basis-full md:basis-auto">
-                    {uploadedImage
-                      ? `Target: ${dimensions.width}x${dimensions.height}px`
-                      : "Upload an image to start."}
-                  </p>
-                  {uploadedImage ? (
-                    <Button
-                      variant="default"
-                      onClick={handleDownload}
-                      disabled={
-                        !loadedImgElement ||
-                        isLoadingImage ||
-                        !dimensions.width ||
-                        !dimensions.height ||
-                        form.formState.errors.backgroundWidth ||
-                        form.formState.errors.backgroundHeight
-                      }
-                      className="flex items-center gap-2"
-                    >
-                      {" "}
-                      <Download className="h-4 w-4" /> Download PNG{" "}
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      onClick={triggerFileInput}
-                      disabled={isLoadingImage}
-                      className="flex items-center gap-2"
-                    >
-                      {" "}
-                      <Upload className="h-4 w-4" /> Upload Image{" "}
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+          {/* REMOVED scroll/height constraints */}
+          <div className="flex-1 w-full space-y-6 lg:sticky lg:top-8">
+            <ImagePreview
+              uploadedImage={uploadedImage}
+              isLoadingImage={isLoadingImage}
+              loadedImgElement={loadedImgElement}
+              previewCanvasRef={previewCanvasRef}
+              targetAspectRatio={targetAspectRatio}
+              backgroundColor={backgroundColor}
+              maxVisualWidth={maxVisualWidth}
+              dimensions={dimensions}
+              formErrors={form.formState.errors}
+              triggerFileInput={triggerFileInput}
+              clearImage={clearImage}
+              handleDownload={handleDownload}
+            />
           </div>
           {/* Right Column: Settings */}
+          {/* REMOVED scroll/height constraints */}
           <div className="lg:w-[400px] xl:w-[450px] space-y-0 flex-shrink-0">
             {/* Outer Accordion Wrapper */}
             <Accordion
@@ -978,9 +697,9 @@ const MainContent = () => {
               collapsible
               value={activeAccordionItem}
               onValueChange={setActiveAccordionItem}
-              className="w-full space-y-6" // Spacing between Canvas/Image sections
+              className="w-full space-y-6"
             >
-              {/* == Canvas Settings Accordion Item == */}
+              {/* Canvas Settings Accordion Item */}
               <AccordionItem value="canvas-settings" className="border-b-0">
                 <Card className="overflow-hidden">
                   <AccordionTrigger className="px-6 py-4 hover:no-underline text-lg [&[data-state=open]>div>svg.lucide-chevron-down]:rotate-180">
@@ -988,253 +707,15 @@ const MainContent = () => {
                       <div className="flex items-center gap-3 font-semibold">
                         <SettingsIcon className="h-5 w-5" /> Canvas Settings
                       </div>
-                      {/* <ChevronDown className="h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-200 lucide lucide-chevron-down" /> */}
                     </div>
                   </AccordionTrigger>
                   <AccordionContent className="px-6 pt-0 pb-6">
-                    <Form {...form}>
-                      <div className="space-y-6 pt-4">
-                        {/* --- Canvas Settings Inner Content --- */}
-                        <Tabs defaultValue="presets" className="w-full">
-                          <TabsList className="grid w-full grid-cols-2 mb-4">
-                            <TabsTrigger value="presets">Presets</TabsTrigger>
-                            <TabsTrigger value="custom">
-                              Custom Size
-                            </TabsTrigger>
-                          </TabsList>
-                          <TabsContent value="presets" className="space-y-4">
-                            <div className="grid grid-cols-1 gap-1 md:grid-cols-1 xl:grid-cols-1">
-                              {Object.entries(GROUPED_PRESETS).map(
-                                ([category, presets]) => (
-                                  <div key={category} className="space-y-2">
-                                    <h4 className="text-sm font-medium text-muted-foreground px-1">
-                                      {category}
-                                    </h4>
-                                    <div className="grid grid-cols-1 gap-1.5">
-                                      {presets.map((preset) => (
-                                        <Button
-                                          key={preset.name}
-                                          type="button"
-                                          variant="outline"
-                                          className="w-full h-auto p-2 text-left flex flex-row items-center justify-between gap-2 hover:bg-accent/50"
-                                          onClick={() =>
-                                            applyPreset(preset.name)
-                                          }
-                                          title={preset.name}
-                                        >
-                                          <span className="text-sm font-medium leading-snug flex-grow mr-2">
-                                            {preset.name}
-                                          </span>
-                                          <Badge
-                                            variant="secondary"
-                                            className="whitespace-nowrap text-xs font-normal flex-shrink-0"
-                                          >
-                                            {" "}
-                                            {preset.width}×{preset.height}{" "}
-                                          </Badge>
-                                        </Button>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )
-                              )}
-                            </div>
-                          </TabsContent>
-                          <TabsContent value="custom" className="space-y-6">
-                            <div className="flex flex-wrap items-start gap-4 bg-muted/40 p-4 rounded-md border border-border/30">
-                              <FormField
-                                control={form.control}
-                                name="backgroundWidth"
-                                rules={{
-                                  required: "Width required",
-                                  valueAsNumber: true,
-                                  min: { value: 10, message: "Min 10px" },
-                                  max: { value: 8000, message: "Max 8000px" },
-                                  validate: (value) =>
-                                    Number.isInteger(Number(value)) ||
-                                    "Integer required",
-                                }}
-                                render={({ field }) => (
-                                  <FormItem className="flex-1 min-w-[100px]">
-                                    <FormLabel>Width (px)</FormLabel>
-                                    <FormControl>
-                                      <Input
-                                        type="number"
-                                        min="10"
-                                        max="8000"
-                                        step="1"
-                                        {...field}
-                                        onChange={(e) =>
-                                          field.onChange(
-                                            e.target.value === ""
-                                              ? ""
-                                              : e.target.value
-                                          )
-                                        }
-                                      />
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-                              <span className="text-muted-foreground font-medium text-lg pt-8">
-                                ×
-                              </span>
-                              <FormField
-                                control={form.control}
-                                name="backgroundHeight"
-                                rules={{
-                                  required: "Height required",
-                                  valueAsNumber: true,
-                                  min: { value: 10, message: "Min 10px" },
-                                  max: { value: 8000, message: "Max 8000px" },
-                                  validate: (value) =>
-                                    Number.isInteger(Number(value)) ||
-                                    "Integer required",
-                                }}
-                                render={({ field }) => (
-                                  <FormItem className="flex-1 min-w-[100px]">
-                                    <FormLabel>Height (px)</FormLabel>
-                                    <FormControl>
-                                      <Input
-                                        type="number"
-                                        min="10"
-                                        max="8000"
-                                        step="1"
-                                        {...field}
-                                        onChange={(e) =>
-                                          field.onChange(
-                                            e.target.value === ""
-                                              ? ""
-                                              : e.target.value
-                                          )
-                                        }
-                                      />
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-                            </div>
-                            <div className="flex flex-wrap items-center gap-4 bg-muted/40 p-4 rounded-md border border-border/30">
-                              <FormField
-                                control={form.control}
-                                name="backgroundColor"
-                                rules={{
-                                  required: "Color required",
-                                  pattern: {
-                                    value: /^#([0-9a-f]{3}|[0-9a-f]{6})$/i,
-                                    message: "Invalid hex (#xxx or #xxxxxx)",
-                                  },
-                                }}
-                                render={({ field }) => (
-                                  <FormItem className="flex flex-col gap-2">
-                                    <FormLabel className="flex items-center gap-2">
-                                      <Palette className="h-4 w-4" /> Background
-                                      Color
-                                    </FormLabel>
-                                    <div className="flex items-center gap-3">
-                                      <FormControl>
-                                        <input
-                                          type="color"
-                                          className="w-10 h-10 border-none cursor-pointer p-0 rounded bg-transparent"
-                                          value={field.value || "#ffffff"}
-                                          onChange={field.onChange}
-                                          style={{
-                                            backgroundColor:
-                                              field.value || "#ffffff",
-                                            border:
-                                              field.value &&
-                                              field.value.toLowerCase() >
-                                                "#eeeeee"
-                                                ? "1px solid #ccc"
-                                                : "none",
-                                          }}
-                                        />
-                                      </FormControl>
-                                      <FormControl>
-                                        <Input
-                                          type="text"
-                                          className="w-24 font-mono text-sm h-10"
-                                          placeholder="#ffffff"
-                                          {...field}
-                                        />
-                                      </FormControl>
-                                    </div>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-                            </div>
-                            <div className="flex flex-wrap gap-2 pt-2">
-                              <h4 className="text-sm font-medium text-muted-foreground w-full mb-1">
-                                Set Aspect Ratio (based on current width)
-                              </h4>
-                              {[
-                                { label: "1:1", ratio: 1 },
-                                { label: "16:9", ratio: 16 / 9 },
-                                { label: "4:3", ratio: 4 / 3 },
-                                { label: "9:16", ratio: 9 / 16 },
-                                { label: "3:4", ratio: 3 / 4 },
-                              ].map((item) => (
-                                <Button
-                                  key={item.label}
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    const currentWidthStr =
-                                      form.getValues().backgroundWidth;
-                                    const currentWidth =
-                                      Number(currentWidthStr);
-                                    if (
-                                      currentWidth > 0 &&
-                                      !form.getFieldState("backgroundWidth")
-                                        .error
-                                    ) {
-                                      const newHeight = Math.max(
-                                        10,
-                                        Math.round(currentWidth / item.ratio)
-                                      );
-                                      const clampedHeight = Math.min(
-                                        8000,
-                                        newHeight
-                                      );
-                                      form.setValue(
-                                        "backgroundHeight",
-                                        clampedHeight,
-                                        {
-                                          shouldValidate: true,
-                                          shouldDirty: true,
-                                        }
-                                      );
-                                      setDimensions({
-                                        width: currentWidth,
-                                        height: clampedHeight,
-                                      });
-                                    } else {
-                                      form.trigger("backgroundWidth");
-                                      console.warn(
-                                        "Cannot set aspect ratio: Current width is invalid."
-                                      );
-                                    }
-                                  }}
-                                >
-                                  {" "}
-                                  {item.label}{" "}
-                                </Button>
-                              ))}
-                            </div>
-                          </TabsContent>
-                        </Tabs>
-                        {/* --- End Canvas Settings Inner Content --- */}
-                      </div>
-                    </Form>
+                    <CanvasSettings form={form} applyPreset={applyPreset} />
                   </AccordionContent>
                 </Card>
               </AccordionItem>
 
-              {/* == Image Controls Accordion Item == */}
+              {/* Image Controls Accordion Item */}
               {uploadedImage && (
                 <AccordionItem value="image-controls" className="border-b-0">
                   <Card className="overflow-hidden">
@@ -1243,386 +724,39 @@ const MainContent = () => {
                         <div className="flex items-center gap-3 font-semibold">
                           <Wand2 className="h-5 w-5" /> Image Controls
                         </div>
-                        {/* <ChevronDown className="h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-200 lucide lucide-chevron-down" /> */}
                       </div>
                     </AccordionTrigger>
                     <AccordionContent className="px-6 pt-0 pb-6">
                       {loadedImgElement ? (
-                        // --- NESTED ACCORDION FOR IMAGE CONTROLS ---
-                        <Accordion
-                          type="multiple"
-                          className="w-full space-y-4 pt-4"
-                        >
-                          {/* Scale & Radius Item */}
-                          <AccordionItem
-                            value="image-scale-radius"
-                            className="border-b-0"
-                          >
-                            <Card className="overflow-hidden border border-border/40 bg-accent/10">
-                              <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm [&[data-state=open]>svg]:rotate-180">
-                                <div className="flex items-center gap-2 font-medium">
-                                  <Scale className="h-4 w-4 text-muted-foreground" />{" "}
-                                  Scale & Radius
-                                </div>
-                              </AccordionTrigger>
-                              <AccordionContent className="px-4 pb-4 pt-0">
-                                <div className="pt-4 space-y-4 border-t border-border/20">
-                                  {/* Scale Slider */}
-                                  <div className="space-y-1.5">
-                                    <div className="flex items-center justify-between gap-2">
-                                      <Label className="text-xs">Scale</Label>
-                                      <span className="text-xs font-mono text-muted-foreground">
-                                        {" "}
-                                        {imageScale.toFixed(2)}x{" "}
-                                      </span>
-                                    </div>
-                                    <Slider
-                                      aria-label="Image Scale"
-                                      value={[imageScale]}
-                                      min={0.1}
-                                      max={5}
-                                      step={0.05}
-                                      onValueChange={handleScaleChange}
-                                    />
-                                  </div>
-                                  {/* Radius Slider */}
-                                  <div className="space-y-1.5">
-                                    <div className="flex items-center justify-between gap-2">
-                                      <Label
-                                        htmlFor="image-border-radius"
-                                        className="text-xs"
-                                      >
-                                        Corner Radius
-                                      </Label>
-                                      <span className="text-xs font-mono text-muted-foreground">
-                                        {" "}
-                                        {imageBorderRadius}%{" "}
-                                      </span>
-                                    </div>
-                                    <Slider
-                                      id="image-border-radius"
-                                      aria-label="Image Corner Radius"
-                                      value={[imageBorderRadius]}
-                                      min={0}
-                                      max={50}
-                                      step={1}
-                                      onValueChange={(value) =>
-                                        setImageBorderRadius(value[0])
-                                      }
-                                    />
-                                  </div>
-                                </div>
-                              </AccordionContent>
-                            </Card>
-                          </AccordionItem>
-
-                          {/* Shadow Item */}
-                          <AccordionItem
-                            value="image-shadow"
-                            className="border-b-0"
-                          >
-                            <Card className="overflow-hidden border border-border/40 bg-accent/10">
-                              <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm [&[data-state=open]>svg]:rotate-180">
-                                <div className="flex items-center gap-2 font-medium">
-                                  <Wind className="h-4 w-4 text-muted-foreground" />{" "}
-                                  Shadow
-                                </div>
-                              </AccordionTrigger>
-                              <AccordionContent className="px-4 pb-0 pt-0">
-                                {" "}
-                                {/* ShadowControl has own Card+Padding */}
-                                <div className="pt-4 border-t border-border/20">
-                                  <ShadowControl
-                                    defaultValues={shadowSettings}
-                                    onChange={setShadowSettings}
-                                  />
-                                </div>
-                              </AccordionContent>
-                            </Card>
-                          </AccordionItem>
-
-                          {/* Border Item */}
-                          <AccordionItem
-                            value="image-border"
-                            className="border-b-0"
-                          >
-                            <Card className="overflow-hidden border border-border/40 bg-accent/10">
-                              <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm [&[data-state=open]>svg]:rotate-180">
-                                <div className="flex items-center gap-2 font-medium">
-                                  <Square className="h-4 w-4 text-muted-foreground" />{" "}
-                                  Border
-                                </div>
-                              </AccordionTrigger>
-                              <AccordionContent className="px-4 pb-4 pt-0">
-                                <div className="pt-4 space-y-4 border-t border-border/20">
-                                  <div className="flex items-center justify-between">
-                                    <Label className="text-xs">
-                                      Enable Border
-                                    </Label>
-                                    <Switch
-                                      size="xs"
-                                      variant={
-                                        imageBorderEnabled
-                                          ? "secondary"
-                                          : "outline"
-                                      }
-                                      onClick={() =>
-                                        setImageBorderEnabled(
-                                          !imageBorderEnabled
-                                        )
-                                      }
-                                    >
-                                      {" "}
-                                      {imageBorderEnabled ? "On" : "Off"}{" "}
-                                    </Switch>
-                                  </div>
-                                  {imageBorderEnabled && (
-                                    <div className="space-y-4">
-                                      <div className="space-y-1.5">
-                                        <Label
-                                          htmlFor="image-border-width"
-                                          className="text-xs"
-                                        >
-                                          Width ({imageBorderWidth}px)
-                                        </Label>
-                                        <Slider
-                                          id="image-border-width"
-                                          min={0}
-                                          max={30}
-                                          step={1}
-                                          value={[imageBorderWidth]}
-                                          onValueChange={(val) =>
-                                            setImageBorderWidth(val[0])
-                                          }
-                                        />
-                                      </div>
-                                      <div className="space-y-1.5">
-                                        <Label className="text-xs">Color</Label>
-                                        <div className="flex items-center gap-3">
-                                          <input
-                                            type="color"
-                                            className="w-8 h-8 border-none cursor-pointer p-0 rounded bg-transparent"
-                                            value={imageBorderColor}
-                                            onChange={(e) =>
-                                              setImageBorderColor(
-                                                e.target.value
-                                              )
-                                            }
-                                            style={{
-                                              backgroundColor: imageBorderColor,
-                                              border:
-                                                imageBorderColor.toLowerCase() >
-                                                "#eeeeee"
-                                                  ? "1px solid #ccc"
-                                                  : "none",
-                                            }}
-                                            title="Border Color"
-                                          />
-                                          <Input
-                                            type="text"
-                                            className="w-20 font-mono text-xs h-8"
-                                            placeholder="#000000"
-                                            value={imageBorderColor}
-                                            onChange={(e) =>
-                                              setImageBorderColor(
-                                                e.target.value
-                                              )
-                                            }
-                                          />
-                                        </div>
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              </AccordionContent>
-                            </Card>
-                          </AccordionItem>
-
-                          {/* Watermark Item */}
-                          <AccordionItem
-                            value="image-watermark"
-                            className="border-b-0"
-                          >
-                            <Card className="overflow-hidden border border-border/40 bg-accent/10">
-                              <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm [&[data-state=open]>svg]:rotate-180">
-                                <div className="flex items-center gap-2 font-medium">
-                                  <Droplet className="h-4 w-4 text-muted-foreground" />{" "}
-                                  Watermark
-                                </div>
-                              </AccordionTrigger>
-                              <AccordionContent className="px-4 pb-4 pt-0">
-                                <div className="pt-4 space-y-4 border-t border-border/20">
-                                  <div className="flex items-center justify-between">
-                                    <Label className="text-xs">
-                                      Enable Watermark
-                                    </Label>
-                                    <Switch
-                                      size="xs text-xs"
-                                      variant={
-                                        watermarkEnabled
-                                          ? "secondary"
-                                          : "outline"
-                                      }
-                                      onClick={() =>
-                                        setWatermarkEnabled(!watermarkEnabled)
-                                      }
-                                    >
-                                      {" "}
-                                      {watermarkEnabled ? "On" : "Off"}{" "}
-                                    </Switch>
-                                  </div>
-                                  {watermarkEnabled && (
-                                    <div className="space-y-4">
-                                      <div className="space-y-1.5">
-                                        <Label
-                                          htmlFor="watermark-text"
-                                          className="text-xs"
-                                        >
-                                          Text
-                                        </Label>
-                                        <Input
-                                          id="watermark-text"
-                                          type="text"
-                                          placeholder="Your watermark"
-                                          value={watermarkText}
-                                          onChange={(e) =>
-                                            setWatermarkText(e.target.value)
-                                          }
-                                          className="h-8 text-xs"
-                                        />
-                                      </div>
-                                      <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-1.5">
-                                          <Label
-                                            htmlFor="watermark-opacity"
-                                            className="text-xs"
-                                          >
-                                            Opacity ({watermarkOpacity}%)
-                                          </Label>
-                                          <Slider
-                                            id="watermark-opacity"
-                                            min={0}
-                                            max={100}
-                                            step={1}
-                                            value={[watermarkOpacity]}
-                                            onValueChange={(val) =>
-                                              setWatermarkOpacity(val[0])
-                                            }
-                                          />
-                                        </div>
-                                        <div className="space-y-1.5">
-                                          <Label
-                                            htmlFor="watermark-size"
-                                            className="text-xs"
-                                          >
-                                            Size ({watermarkSizePercent}%)
-                                          </Label>
-                                          <Slider
-                                            id="watermark-size"
-                                            min={1}
-                                            max={15}
-                                            step={0.5}
-                                            value={[watermarkSizePercent]}
-                                            onValueChange={(val) =>
-                                              setWatermarkSizePercent(val[0])
-                                            }
-                                          />
-                                        </div>
-                                      </div>
-                                      <div className="space-y-1.5">
-                                        <Label className="text-xs">Color</Label>
-                                        <div className="flex items-center gap-3">
-                                          <input
-                                            type="color"
-                                            className="w-8 h-8 border-none cursor-pointer p-0 rounded bg-transparent"
-                                            value={watermarkColor}
-                                            onChange={(e) =>
-                                              setWatermarkColor(e.target.value)
-                                            }
-                                            style={{
-                                              backgroundColor: watermarkColor,
-                                              border:
-                                                watermarkColor.toLowerCase() >
-                                                "#eeeeee"
-                                                  ? "1px solid #ccc"
-                                                  : "none",
-                                            }}
-                                            title="Watermark Color"
-                                          />
-                                          <Input
-                                            type="text"
-                                            className="w-20 font-mono text-xs h-8"
-                                            placeholder="#ffffff"
-                                            value={watermarkColor}
-                                            onChange={(e) =>
-                                              setWatermarkColor(e.target.value)
-                                            }
-                                          />
-                                        </div>
-                                      </div>
-                                      <div className="space-y-1.5">
-                                        <Label
-                                          htmlFor="watermark-font"
-                                          className="text-xs flex items-center gap-1"
-                                        >
-                                          {" "}
-                                          <Type className="h-3 w-3" /> Font
-                                          Family{" "}
-                                        </Label>
-                                        <select
-                                          id="watermark-font"
-                                          value={watermarkFontFamily}
-                                          onChange={(e) =>
-                                            setWatermarkFontFamily(
-                                              e.target.value
-                                            )
-                                          }
-                                          className="flex h-8 w-full items-center justify-between rounded-md border border-input bg-background px-2 py-1 text-xs ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                        >
-                                          {WATERMARK_FONTS.map((font) => (
-                                            <option
-                                              key={font.value}
-                                              value={font.value}
-                                            >
-                                              {" "}
-                                              {font.name}{" "}
-                                            </option>
-                                          ))}
-                                        </select>
-                                      </div>
-                                      <div className="space-y-1.5">
-                                        <Label className="text-xs">
-                                          Position
-                                        </Label>
-                                        <div className="flex gap-2">
-                                          {["left", "center", "right"].map(
-                                            (pos) => (
-                                              <Button
-                                                key={pos}
-                                                size="xs"
-                                                variant={
-                                                  watermarkPosition === pos
-                                                    ? "default"
-                                                    : "outline"
-                                                }
-                                                onClick={() =>
-                                                  setWatermarkPosition(pos)
-                                                }
-                                                className="capitalize flex-1 h-8 text-xs"
-                                              >
-                                                {pos}
-                                              </Button>
-                                            )
-                                          )}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              </AccordionContent>
-                            </Card>
-                          </AccordionItem>
-                        </Accordion> // --- END NESTED ACCORDION ---
+                        <ImageAdjustmentControls
+                          imageScale={imageScale}
+                          setImageScale={setImageScale}
+                          imageBorderRadius={imageBorderRadius}
+                          setImageBorderRadius={setImageBorderRadius}
+                          shadowSettings={shadowSettings}
+                          setShadowSettings={setShadowSettings}
+                          imageBorderEnabled={imageBorderEnabled}
+                          setImageBorderEnabled={setImageBorderEnabled}
+                          imageBorderWidth={imageBorderWidth}
+                          setImageBorderWidth={setImageBorderWidth}
+                          imageBorderColor={imageBorderColor}
+                          setImageBorderColor={setImageBorderColor}
+                          watermarkEnabled={watermarkEnabled}
+                          setWatermarkEnabled={setWatermarkEnabled}
+                          watermarkText={watermarkText}
+                          setWatermarkText={setWatermarkText}
+                          watermarkOpacity={watermarkOpacity}
+                          setWatermarkOpacity={setWatermarkOpacity}
+                          watermarkSizePercent={watermarkSizePercent}
+                          setWatermarkSizePercent={setWatermarkSizePercent}
+                          watermarkColor={watermarkColor}
+                          setWatermarkColor={setWatermarkColor}
+                          watermarkFontFamily={watermarkFontFamily}
+                          setWatermarkFontFamily={setWatermarkFontFamily}
+                          watermarkPosition={watermarkPosition}
+                          setWatermarkPosition={setWatermarkPosition}
+                          WATERMARK_FONTS={WATERMARK_FONTS}
+                        />
                       ) : (
                         <div className="pt-4 text-center text-muted-foreground">
                           Loading image data...
@@ -1633,7 +767,7 @@ const MainContent = () => {
                 </AccordionItem>
               )}
             </Accordion>{" "}
-            {/* End Outer Accordion Wrapper */}
+            {/* End Outer Accordion */}
           </div>{" "}
           {/* End Right Column */}
         </div>{" "}
