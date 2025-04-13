@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "../ui/switch"; // Make sure path is correct
 import ShadowControl from "./ShadowControl"; // Assuming ShadowControl is in the same dir or adjust path
 
-import { Scale, Square, Wind, Droplet, Type } from "lucide-react";
+import { Scale, Square, Wind, Droplet, Type, Move } from "lucide-react"; // Import Move icon
 
 // Expects WATERMARK_FONTS to be passed as a prop or defined globally/imported
 // For simplicity, let's assume it's passed as a prop now.
@@ -21,6 +21,10 @@ import { Scale, Square, Wind, Droplet, Type } from "lucide-react";
 const ImageAdjustmentControls = ({
   imageScale,
   setImageScale,
+  imageOffsetX, // Receive offset X
+  setImageOffsetX, // Receive offset X setter
+  imageOffsetY, // Receive offset Y
+  setImageOffsetY, // Receive offset Y setter
   imageBorderRadius,
   setImageBorderRadius,
   shadowSettings,
@@ -47,6 +51,8 @@ const ImageAdjustmentControls = ({
   setWatermarkPosition,
   WATERMARK_FONTS, // Pass the fonts array
 }) => {
+  const offsetMinMax = 1500; // Define min/max for offset sliders
+
   return (
     // --- NESTED ACCORDION FOR IMAGE CONTROLS ---
     <Accordion type="multiple" className="w-full space-y-4 pt-4">
@@ -97,6 +103,64 @@ const ImageAdjustmentControls = ({
                   max={50}
                   step={1}
                   onValueChange={(val) => setImageBorderRadius(val[0])}
+                />
+              </div>
+            </div>
+          </AccordionContent>
+        </Card>
+      </AccordionItem>
+
+      {/* Position Item - NEW */}
+      <AccordionItem value="image-position" className="border-b-0">
+        <Card className="overflow-hidden border border-border/40 bg-accent/10">
+          <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm [&[data-state=open]>svg]:rotate-180">
+            <div className="flex items-center gap-2 font-medium">
+              <Move className="h-4 w-4 text-muted-foreground" /> Position
+              (Offset)
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="px-4 pb-4 pt-0">
+            <div className="pt-4 space-y-4 border-t border-border/20">
+              {/* Offset X Slider */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <Label htmlFor="image-offset-x" className="text-xs">
+                    Offset X
+                  </Label>
+                  <span className="text-xs font-mono text-muted-foreground">
+                    {" "}
+                    {imageOffsetX}px{" "}
+                  </span>
+                </div>
+                <Slider
+                  id="image-offset-x"
+                  aria-label="Image Offset X"
+                  value={[imageOffsetX]}
+                  min={-offsetMinMax}
+                  max={offsetMinMax}
+                  step={1}
+                  onValueChange={(val) => setImageOffsetX(val[0])}
+                />
+              </div>
+              {/* Offset Y Slider */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <Label htmlFor="image-offset-y" className="text-xs">
+                    Offset Y
+                  </Label>
+                  <span className="text-xs font-mono text-muted-foreground">
+                    {" "}
+                    {imageOffsetY}px{" "}
+                  </span>
+                </div>
+                <Slider
+                  id="image-offset-y"
+                  aria-label="Image Offset Y"
+                  value={[imageOffsetY]}
+                  min={-offsetMinMax}
+                  max={offsetMinMax}
+                  step={1}
+                  onValueChange={(val) => setImageOffsetY(val[0])}
                 />
               </div>
             </div>

@@ -14,7 +14,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Settings as SettingsIcon, Wand2 } from "lucide-react";
+import { Settings as SettingsIcon, Wand2, Move } from "lucide-react";
 
 // Magic UI
 import { Meteors } from "@/components/magicui/meteors"; // Adjusted path assumption
@@ -123,6 +123,8 @@ const MainContent = () => {
   const [uploadedImage, setUploadedImage] = useState(null);
   const [loadedImgElement, setLoadedImgElement] = useState(null);
   const [imageScale, setImageScale] = useState(1);
+  const [imageOffsetX, setImageOffsetX] = useState(0); // New state for X offset
+  const [imageOffsetY, setImageOffsetY] = useState(0); // New state for Y offset
   const [shadowSettings, setShadowSettings] = useState({
     offsetX: 0,
     offsetY: 4,
@@ -301,8 +303,12 @@ const MainContent = () => {
     const totalHeight = scaledImgH + 2 * effectiveBorderWidth;
     const outerX = (effectiveCanvasWidth - totalWidth) / 2;
     const outerY = (effectiveCanvasHeight - totalHeight) / 2;
-    const imageX = outerX + effectiveBorderWidth;
-    const imageY = outerY + effectiveBorderWidth;
+    // Apply offsets here, scaled for preview
+    const imageX = outerX + effectiveBorderWidth + imageOffsetX * scaleFactor;
+    const imageY = outerY + effectiveBorderWidth + imageOffsetY * scaleFactor;
+    // Calculate the offset position for the shadow/border shape
+    const shapeOuterX = outerX + imageOffsetX * scaleFactor;
+    const shapeOuterY = outerY + imageOffsetY * scaleFactor;
     const shorterSideInner = Math.min(scaledImgW, scaledImgH);
     const innerRadius =
       shorterSideInner > 0 ? (shorterSideInner * imageBorderRadius) / 100 : 0;
@@ -315,15 +321,16 @@ const MainContent = () => {
     ctx.shadowOffsetY = shadowSettings.offsetY * scaleFactor;
     ctx.shadowBlur = shadowSettings.blur * scaleFactor;
     ctx.shadowColor = `rgba(0, 0, 0, ${shadowSettings.opacity / 100})`;
+    // Draw the shadow shape at the offset position
     createRoundedRectPath(
       ctx,
-      outerX,
-      outerY,
+      shapeOuterX, // Use offset X
+      shapeOuterY, // Use offset Y
       totalWidth,
       totalHeight,
       outerRadius
     );
-    ctx.fillStyle = backgroundColor;
+    ctx.fillStyle = backgroundColor; // Use background color for the shadow fill to avoid transparency issues if border exists
     ctx.fill();
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 0;
@@ -332,10 +339,11 @@ const MainContent = () => {
     // 2. Border
     if (imageBorderEnabled && effectiveBorderWidth > 0) {
       ctx.fillStyle = imageBorderColor;
+      // Draw the border shape at the offset position
       createRoundedRectPath(
         ctx,
-        outerX,
-        outerY,
+        shapeOuterX, // Use offset X
+        shapeOuterY, // Use offset Y
         totalWidth,
         totalHeight,
         outerRadius
@@ -344,6 +352,7 @@ const MainContent = () => {
     }
     // 3. Image
     ctx.save();
+    // Clip using the inner shape at the final image position
     createRoundedRectPath(
       ctx,
       imageX,
@@ -371,20 +380,25 @@ const MainContent = () => {
       ctx.textAlign = watermarkPosition;
       ctx.textBaseline = "bottom";
       let wmX;
-      const wmY = outerY + totalHeight - padding;
+      // Adjust watermark Y position based on image Y offset
+      const wmY = shapeOuterY + totalHeight - padding; // Use shapeOuterY
       switch (watermarkPosition) {
         case "left":
-          wmX = outerX + padding + effectiveBorderWidth;
+          // Adjust watermark X position based on image X offset
+          wmX = shapeOuterX + padding + effectiveBorderWidth; // Use shapeOuterX
           break;
         case "right":
-          wmX = outerX + totalWidth - padding - effectiveBorderWidth;
+          // Adjust watermark X position based on image X offset
+          wmX = shapeOuterX + totalWidth - padding - effectiveBorderWidth; // Use shapeOuterX
           break;
         case "center":
         default:
-          wmX = outerX + totalWidth / 2;
+          // Adjust watermark X position based on image X offset
+          wmX = shapeOuterX + totalWidth / 2; // Use shapeOuterX
           break;
       }
-      if (wmY > 0 && wmY < effectiveCanvasHeight + fontSize)
+      // Check bounds considering offsets (using imageX/Y for actual image area)
+      if (wmY > imageY && wmY < imageY + scaledImgH + fontSize)
         ctx.fillText(watermarkText, wmX, wmY);
       ctx.restore();
     }
@@ -393,6 +407,8 @@ const MainContent = () => {
     // Dependencies
     loadedImgElement,
     imageScale,
+    imageOffsetX, // Add offset X
+    imageOffsetY, // Add offset Y
     shadowSettings,
     backgroundColor,
     canvasWidth,
@@ -419,6 +435,8 @@ const MainContent = () => {
       reader.onload = (e) => {
         setUploadedImage(e.target?.result);
         setImageScale(1);
+        setImageOffsetX(0); // Reset offset X
+        setImageOffsetY(0); // Reset offset Y
         setImageBorderRadius(0);
         setImageBorderEnabled(false);
         setWatermarkEnabled(false);
@@ -437,6 +455,8 @@ const MainContent = () => {
   const clearImage = () => {
     setUploadedImage(null);
     setImageScale(1);
+    setImageOffsetX(0); // Reset offset X
+    setImageOffsetY(0); // Reset offset Y
     setImageBorderRadius(0);
     setImageBorderEnabled(false);
     setWatermarkEnabled(false);
@@ -514,8 +534,12 @@ const MainContent = () => {
     const totalHeight = scaledImgH + 2 * effectiveBorderWidth;
     const outerX = (targetWidth - totalWidth) / 2;
     const outerY = (targetHeight - totalHeight) / 2;
-    const imageX = outerX + effectiveBorderWidth;
-    const imageY = outerY + effectiveBorderWidth;
+    // Apply offsets here (not scaled for download)
+    const imageX = outerX + effectiveBorderWidth + imageOffsetX;
+    const imageY = outerY + effectiveBorderWidth + imageOffsetY;
+    // Calculate the offset position for the shadow/border shape
+    const shapeOuterX = outerX + imageOffsetX;
+    const shapeOuterY = outerY + imageOffsetY;
     const shorterSideInner = Math.min(scaledImgW, scaledImgH);
     const innerRadius =
       shorterSideInner > 0 ? (shorterSideInner * imageBorderRadius) / 100 : 0;
@@ -530,15 +554,16 @@ const MainContent = () => {
     ctx.shadowOffsetY = shadowSettings.offsetY;
     ctx.shadowBlur = shadowSettings.blur;
     ctx.shadowColor = `rgba(0, 0, 0, ${shadowSettings.opacity / 100})`;
+    // Draw the shadow shape at the offset position
     createRoundedRectPath(
       ctx,
-      outerX,
-      outerY,
+      shapeOuterX, // Use offset X
+      shapeOuterY, // Use offset Y
       totalWidth,
       totalHeight,
       outerRadius
     );
-    ctx.fillStyle = backgroundColor;
+    ctx.fillStyle = backgroundColor; // Use background color for the shadow fill
     ctx.fill();
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 0;
@@ -547,10 +572,11 @@ const MainContent = () => {
     // 2. Border
     if (imageBorderEnabled && effectiveBorderWidth > 0) {
       ctx.fillStyle = imageBorderColor;
+      // Draw the border shape at the offset position
       createRoundedRectPath(
         ctx,
-        outerX,
-        outerY,
+        shapeOuterX, // Use offset X
+        shapeOuterY, // Use offset Y
         totalWidth,
         totalHeight,
         outerRadius
@@ -559,6 +585,7 @@ const MainContent = () => {
     }
     // 3. Image
     ctx.save();
+    // Clip using the inner shape at the final image position
     createRoundedRectPath(
       ctx,
       imageX,
@@ -590,20 +617,25 @@ const MainContent = () => {
       ctx.textAlign = watermarkPosition;
       ctx.textBaseline = "bottom";
       let wmX;
-      const wmY = outerY + totalHeight - padding;
+      // Adjust watermark Y position based on image Y offset
+      const wmY = shapeOuterY + totalHeight - padding; // Use shapeOuterY
       switch (watermarkPosition) {
         case "left":
-          wmX = outerX + padding + effectiveBorderWidth;
+          // Adjust watermark X position based on image X offset
+          wmX = shapeOuterX + padding + effectiveBorderWidth; // Use shapeOuterX
           break;
         case "right":
-          wmX = outerX + totalWidth - padding - effectiveBorderWidth;
+          // Adjust watermark X position based on image X offset
+          wmX = shapeOuterX + totalWidth - padding - effectiveBorderWidth; // Use shapeOuterX
           break;
         case "center":
         default:
-          wmX = outerX + totalWidth / 2;
+          // Adjust watermark X position based on image X offset
+          wmX = shapeOuterX + totalWidth / 2; // Use shapeOuterX
           break;
       }
-      if (wmY > 0 && wmY < targetHeight + fontSize)
+      // Check bounds considering offsets (using imageX/Y for actual image area)
+      if (wmY > imageY && wmY < imageY + scaledImgH + fontSize)
         ctx.fillText(watermarkText, wmX, wmY);
       ctx.restore();
     }
@@ -710,12 +742,13 @@ const MainContent = () => {
                     </div>
                   </AccordionTrigger>
                   <AccordionContent className="px-6 pt-0 pb-6">
+                    {/* CanvasSettings component goes here */}
                     <CanvasSettings form={form} applyPreset={applyPreset} />
                   </AccordionContent>
                 </Card>
               </AccordionItem>
 
-              {/* Image Controls Accordion Item */}
+              {/* Image Controls Accordion Item - Moved to be a sibling */}
               {uploadedImage && (
                 <AccordionItem value="image-controls" className="border-b-0">
                   <Card className="overflow-hidden">
@@ -731,6 +764,10 @@ const MainContent = () => {
                         <ImageAdjustmentControls
                           imageScale={imageScale}
                           setImageScale={setImageScale}
+                          imageOffsetX={imageOffsetX} // Pass offset X state
+                          setImageOffsetX={setImageOffsetX} // Pass offset X setter
+                          imageOffsetY={imageOffsetY} // Pass offset Y state
+                          setImageOffsetY={setImageOffsetY} // Pass offset Y setter
                           imageBorderRadius={imageBorderRadius}
                           setImageBorderRadius={setImageBorderRadius}
                           shadowSettings={shadowSettings}
@@ -768,7 +805,7 @@ const MainContent = () => {
               )}
             </Accordion>{" "}
             {/* End Outer Accordion */}
-          </div>{" "}
+          </div>
           {/* End Right Column */}
         </div>{" "}
         {/* End Layout */}
